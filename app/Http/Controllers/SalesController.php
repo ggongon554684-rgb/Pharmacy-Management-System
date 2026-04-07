@@ -54,18 +54,6 @@ class SalesController extends Controller
         }
 
         return DB::transaction(function () use ($validated) {
-            $patientId = $validated['patient_id'] ?? null;
-
-            if ($validated['patient_mode'] === 'new') {
-                $patient = Patient::create([
-                    'name' => $validated['patient_name'],
-                    'birthdate' => $validated['patient_birthdate'],
-                    'contact_info' => $validated['patient_contact_info'],
-                    'allergies' => $validated['patient_allergies'] ?? null,
-                ]);
-                $patientId = $patient->id;
-            }
-
             $lineEntries = [];
             $totalAmount = 0;
 
@@ -109,6 +97,17 @@ class SalesController extends Controller
 
             if (empty($lineEntries)) {
                 return back()->withErrors(['product_ids' => 'Please add at least one valid medicine line.'])->withInput();
+            }
+
+            $patientId = $validated['patient_id'] ?? null;
+            if ($validated['patient_mode'] === 'new') {
+                $patient = Patient::create([
+                    'name' => $validated['patient_name'],
+                    'birthdate' => $validated['patient_birthdate'],
+                    'contact_info' => $validated['patient_contact_info'],
+                    'allergies' => $validated['patient_allergies'] ?? null,
+                ]);
+                $patientId = $patient->id;
             }
 
             $sale = Sale::create([

@@ -31,6 +31,11 @@
                         <a class="nav-link {{ request()->routeIs('products.*') ? 'active' : '' }}" href="{{ route('products.index') }}">{{ __('Products') }}</a>
                     </li>
                 @endcan
+                @can('create products')
+                    <li class="nav-item">
+                        <a class="nav-link {{ request()->routeIs('products.create') ? 'active' : '' }}" href="{{ route('products.create') }}">Add Product</a>
+                    </li>
+                @endcan
                 @canany(['create sales','view sales'])
                     <li class="nav-item">
                         <a class="nav-link {{ request()->routeIs('sales.*') ? 'active' : '' }}" href="{{ route('sales.index') }}">POS / Sales</a>

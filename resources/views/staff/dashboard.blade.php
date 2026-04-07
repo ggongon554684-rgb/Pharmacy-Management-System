@@ -13,6 +13,9 @@
                             <h6 class="text-muted">Inventory</h6>
                             <h3 class="mb-2">{{ $productCount }}</h3>
                             <a href="{{ route('products.index') }}" class="btn btn-sm btn-outline-primary">Manage Stock</a>
+                            @can('create products')
+                                <a href="{{ route('products.create') }}" class="btn btn-sm btn-primary mt-2">Add Product</a>
+                            @endcan
                         </div>
                     </div>
                 </div>
