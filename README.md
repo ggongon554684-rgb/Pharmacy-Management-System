@@ -1,100 +1,122 @@
-<!-- 
-  Save as README.md – GitHub, GitLab, etc. will render the HTML/CSS inside.
-  For local preview, use any Markdown viewer that supports raw HTML.
--->
+# Pharmacy Management System
 
+Role-based pharmacy web app built with Laravel.  
+Focus areas: inventory flow, patient records, purchase orders, stock movements, sales/POS, and audit logging.
 
-# 💊 Pharmacy Management System
+## Core Features
 
-> **Secure · Role‑based · Immutable audit trail**  
-> Tracks patients, inventory batches, purchase orders, stock movements, and sales.
+- Product and inventory batch management
+- Patient management and patient purchase history
+- Purchase order creation, approval, and receiving
+- Stock request creation and fulfillment (FIFO deduction)
+- POS / medicine release flow
+- Immutable stock movement tracking
+- Audit trail for key CRUD and flow actions
+- Role-based access control using Spatie Permission
 
----
+## Tech Stack
 
-## 📋 System Overview
+- Laravel (PHP)
+- Blade templates + Bootstrap
+- MySQL/SQLite
+- Spatie Laravel Permission
+- PHPUnit feature testing
 
-This application handles core pharmacy operations with **strict role permissions** and a **complete audit log**. Every stock change is recorded as an immutable `StockMovement` and sensitive actions are snapshotted in `AuditLog`.
+## Role Responsibilities
 
-### 🧩 Core domains
+- `staff`
+  - Manage products/inventory (including **Add Product**)
+  - Create purchase orders
+  - Receive incoming deliveries
+  - Approve and fulfill stock release requests
+  - View reports and stock movements
+- `pharmacist`
+  - Manage patients
+  - Record sales / release medicine via POS
+  - Create stock requests for low front-shop stock
+  - View patient-related reports
+- `admin`
+  - Approve purchase orders
+  - View incoming deliveries and stock movements
+  - Perform stock override (with admin PIN)
+  - View patients and audit logs
 
-| Domain | Purpose |
-|--------|---------|
-| 👥 Patient Management | Profiles + purchase histories |
-| 📦 Inventory Management | Product + batch‑level stock control |
-| 🛒 Purchase Orders & Receiving | Incoming stock from suppliers |
-| 📤 Stock Requests & Fulfillment | Moving stock to front‑shop (FIFO) |
-| 📊 Stock Movement Tracking | Immutable ledger of all changes |
-| 🔐 Audit Trail | Snapshots of who did what & before/after values |
-| 🛡️ Role‑Based Access (RBAC) | Spatie permissions applied via middleware |
+## Setup
 
----
+1. Install dependencies
+```bash
+composer install
+npm install
+```
 
-## 👤 Role‑Based Access Control
+2. Configure environment
+```bash
+cp .env.example .env
+php artisan key:generate
+```
 
-Users are routed to role‑specific dashboards after login. Permissions are enforced at the route level (e.g., `can:view_reports`).
+3. Database and seed
+```bash
+php artisan migrate --seed
+```
 
-<div class="grid-3">
-  <div class="role-card admin">
-    <strong>🧑‍💼 Admin</strong><br>
-    Approve purchase orders, view deliveries, PIN‑protected stock overrides, view audit trails, oversee patient records.
-  </div>
-  <div class="role-card pharmacist">
-    <strong>🧑‍⚕️ Pharmacist</strong><br>
-    Manage patients, handle sales, create front‑shop stock requests, view patient purchase reports.
-  </div>
-  <div class="role-card staff">
-    <strong>🧑‍💻 Staff</strong><br>
-    Manage products, create/receive purchase orders, approve/fulfill stock requests (FIFO), view stock movement reports.
-  </div>
-</div>
+4. Run app
+```bash
+php artisan serve
+npm run dev
+```
 
----
+## Reset and Reseed
 
-## 🔄 Core Workflows (visual steps)
+Use this when you want a clean demo database:
 
-<div class="workflow-step">
-  <span class="flow-icon">📦</span> <strong>A. Inventory Receive (PO → Stock)</strong><br>
-  1️⃣ Staff creates Purchase Order (PO) &nbsp;→&nbsp; 
-  2️⃣ Admin approves PO &nbsp;→&nbsp; 
-  3️⃣ Staff receives delivery → auto‑creates batches, logs incoming movement, marks PO received, writes audit log.
-</div>
+```bash
+php artisan optimize:clear
+php artisan migrate:fresh --seed
+```
 
-<div class="workflow-step">
-  <span class="flow-icon">🏪</span> <strong>B. Front‑Shop Shortage (Stock Request)</strong><br>
-  1️⃣ Pharmacist creates stock request &nbsp;→&nbsp; 
-  2️⃣ Staff approves & fulfills → checks available non‑expired stock, deducts using <strong>FIFO</strong>, logs release movement, marks request fulfilled.
-</div>
+## Default User Credentials
 
-<div class="workflow-step">
-  <span class="flow-icon">🔒</span> <strong>C. Admin Stock Override</strong><br>
-  1️⃣ Admin selects product batch, submits override quantity &nbsp;→&nbsp; 
-  2️⃣ System asks for Secure PIN &nbsp;→&nbsp; 
-  3️⃣ Valid PIN → batch updated, adjustment movement logged, audit log captures before/after.
-</div>
+After seeding:
 
-<div class="workflow-step">
-  <span class="flow-icon">👤</span> <strong>D. Patient & Purchase History</strong><br>
-  Pharmacist manages patient profiles, logs sales → sales linked via <code>Sale</code> + <code>SaleLineItem</code> → system generates patient purchase reports.
-</div>
+- Admin: `admin@pharmacy.com` / `password`
+- Pharmacist: `pharmacist@pharmacy.com` / `password`
+- Staff: `staff@pharmacy.com` / `password`
 
----
+If credentials fail after updates, run:
 
-## 🏗️ High‑Level Architecture (MVC)
+```bash
+php artisan db:seed --class=RolesAndPermissionSeeder
+php artisan db:seed --class=UserSeeder
+php artisan optimize:clear
+```
 
-The system follows a strict MVC pattern to separate concerns and enforce business logic.
+## Main Workflow
 
-| Layer | Key components |
-|-------|----------------|
-| **Routes** | `routes/web.php` – middleware `can:permission` for entry‑point control |
-| **Controllers** | `PatientController`, `InventoryBatchController`, `StockRequestController`, `PurchaseOrderController`, `AdminStockOverrideController`, `ReportController`, `AuditLogController`, `DashboardController` |
-| **Models** | `Product`, `InventoryBatch`, `StockMovement` (immutable), `Patient`, `Sale`, `PurchaseOrder`, `StockRequest`, `AuditLog`, `User` (with Spatie roles) |
-| **Migrations** | Foreign keys + constraints for data integrity – products, batches, sales, audit logs, stock movements, purchase orders, stock requests |
-| **Seeders** | `RolesAndPermissionSeeder`, `UserSeeder`, `InventorySeeder` – run via `DatabaseSeeder.php` |
-| **Views** | Blade + Bootstrap – `patients/`, `products/`, `purchase-orders/`, `stock-requests/`, `reports/`, `audit-logs/`, `stock-movements/` |
+1. Staff creates PO
+2. Admin approves PO
+3. Staff receives PO (creates batches + incoming stock movement)
+4. Pharmacist creates stock request when needed
+5. Staff fulfills stock request (FIFO from non-expired batches)
+6. Pharmacist records sale (POS), stock is deducted, history is recorded
+7. Admin can override stock with PIN (audited)
 
-### 🔀 Data request lifecycle
+## Important Paths
 
-```text
-[User clicks] → [Route + Middleware] → [Controller validation] 
-    → [Model update] → [StockMovement / AuditLog recorded] 
-    → [Redirect with flash message] → [Blade view renders]
+- Routes: `routes/web.php`
+- Controllers: `app/Http/Controllers`
+- Models: `app/Models`
+- Migrations: `database/migrations`
+- Seeders: `database/seeders`
+- Views: `resources/views`
+- Tests: `tests/Feature/SystemFlowTest.php`
+
+## Testing
+
+Run full test suite:
+
+```bash
+php artisan test
+```
+
+Current system flow tests include role-based end-to-end coverage for staff/pharmacist/admin actions.
