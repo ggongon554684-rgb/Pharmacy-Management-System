@@ -10,6 +10,7 @@ use App\Http\Controllers\PurchaseOrderController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\StockMovementController;
 use App\Http\Controllers\StockRequestController;
+use App\Http\Controllers\SalesController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
@@ -102,6 +103,19 @@ Route::middleware('auth')->group(function () {
     Route::get('reports/patient-purchases', [ReportController::class, 'patientPurchases'])
         ->middleware('can:view reports')
         ->name('reports.patient-purchases');
+
+    Route::get('sales', [SalesController::class, 'index'])
+        ->middleware('can:view sales')
+        ->name('sales.index');
+    Route::get('sales/create', [SalesController::class, 'create'])
+        ->middleware('can:create sales')
+        ->name('sales.create');
+    Route::post('sales', [SalesController::class, 'store'])
+        ->middleware('can:create sales')
+        ->name('sales.store');
+    Route::get('sales/{sale}', [SalesController::class, 'show'])
+        ->middleware('can:view sales')
+        ->name('sales.show');
 
     Route::get('stock-movements', [StockMovementController::class, 'index'])
         ->middleware('can:view stock movements')

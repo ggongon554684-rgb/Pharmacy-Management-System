@@ -4,7 +4,9 @@
         <div class="container-fluid">
             @if(session('success'))<div class="alert alert-success">{{ session('success') }}</div>@endif
             @if(session('error'))<div class="alert alert-danger">{{ session('error') }}</div>@endif
-            <a href="{{ route('purchase-orders.create') }}" class="btn btn-primary btn-sm mb-3">Create PO</a>
+            @can('create purchase orders')
+                <a href="{{ route('purchase-orders.create') }}" class="btn btn-primary btn-sm mb-3">Create PO</a>
+            @endcan
             <div class="card shadow-sm">
                 <div class="card-body">
                     <table class="table table-striped mb-0">

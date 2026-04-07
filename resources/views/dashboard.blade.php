@@ -38,6 +38,16 @@
                     </div>
                 </div>
                 @endcan
+                @can('create sales')
+                <div class="col-md-3">
+                    <div class="card shadow-sm">
+                        <div class="card-body">
+                            <h6 class="text-muted">POS</h6>
+                            <a href="{{ route('sales.create') }}" class="btn btn-sm btn-outline-primary">Release Medicine</a>
+                        </div>
+                    </div>
+                </div>
+                @endcan
                 @can('view reports')
                 <div class="col-md-3">
                     <div class="card shadow-sm">

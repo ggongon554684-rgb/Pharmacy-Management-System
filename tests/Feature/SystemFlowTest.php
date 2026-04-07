@@ -70,7 +70,7 @@ class SystemFlowTest extends TestCase
 
         $this->post('/logout')->assertRedirect(route('login'));
 
-        // Pharmacist manages patients and requests medicine.
+        // Pharmacist manages patients, sells medicine, and requests medicine.
         $this->post('/login', [
             'email' => 'flow-pharmacist@example.com',
             'password' => 'password',
@@ -84,6 +84,27 @@ class SystemFlowTest extends TestCase
         ])->assertRedirect(route('patients.index'));
 
         $this->assertDatabaseHas('patients', ['name' => 'Flow Patient']);
+
+        $patient = \App\Models\Patient::where('name', 'Flow Patient')->firstOrFail();
+
+        $this->post(route('sales.store'), [
+            'patient_mode' => 'existing',
+            'patient_id' => $patient->id,
+            'payment_method' => 'cash',
+            'product_ids' => [$product->id],
+            'quantities' => [2],
+        ])->assertRedirect();
+
+        $sale = \App\Models\Sale::latest('id')->firstOrFail();
+        $this->assertDatabaseHas('sales', [
+            'id' => $sale->id,
+            'patient_id' => $patient->id,
+            'payment_method' => 'cash',
+        ]);
+        $this->assertDatabaseHas('sale_line_items', [
+            'sale_id' => $sale->id,
+            'quantity' => 2,
+        ]);
 
         $this->post(route('stock-requests.store'), [
             'product_id' => $product->id,
@@ -144,6 +165,10 @@ class SystemFlowTest extends TestCase
         $this->assertDatabaseHas('audit_logs', [
             'action' => 'created',
             'auditable_type' => 'App\Models\Patient',
+        ]);
+        $this->assertDatabaseHas('audit_logs', [
+            'action' => 'sale_created',
+            'auditable_type' => 'App\Models\Sale',
         ]);
         $this->assertDatabaseHas('audit_logs', [
             'action' => 'created',
