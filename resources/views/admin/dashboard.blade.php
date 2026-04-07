@@ -38,6 +38,26 @@
                     </div>
                 </div>
                 @endcan
+                @can('view incoming deliveries')
+                <div class="col-md-3">
+                    <div class="card shadow-sm">
+                        <div class="card-body">
+                            <h6 class="text-muted">Incoming Deliveries</h6>
+                            <a href="{{ route('purchase-orders.incoming') }}" class="btn btn-sm btn-outline-primary">View Incoming</a>
+                        </div>
+                    </div>
+                </div>
+                @endcan
+                @can('view stock movements')
+                <div class="col-md-3">
+                    <div class="card shadow-sm">
+                        <div class="card-body">
+                            <h6 class="text-muted">Stock Movements</h6>
+                            <a href="{{ route('stock-movements.index') }}" class="btn btn-sm btn-outline-primary">View Movement Log</a>
+                        </div>
+                    </div>
+                </div>
+                @endcan
                 @can('view audit logs')
                 <div class="col-md-3">
                     <div class="card shadow-sm">

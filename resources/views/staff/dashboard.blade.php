@@ -47,6 +47,16 @@
                     </div>
                 </div>
                 @endcan
+                @can('edit inventory')
+                <div class="col-md-3">
+                    <div class="card shadow-sm">
+                        <div class="card-body">
+                            <h6 class="text-muted">Incoming</h6>
+                            <a href="{{ route('purchase-orders.incoming') }}" class="btn btn-sm btn-outline-primary">Receive Deliveries</a>
+                        </div>
+                    </div>
+                </div>
+                @endcan
             </div>
 
             <div class="card shadow-sm">
