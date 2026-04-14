@@ -2,26 +2,88 @@
 
 namespace App\Http\Controllers;
 
+use Barryvdh\DomPDF\Facade\Pdf;
+use Carbon\Carbon;
 use App\Models\Product;
 use App\Models\Sale;
+use Illuminate\Http\Request;
 
 class ReportController extends Controller
 {
-    public function inventory()
+    public function inventory(Request $request)
     {
+        $month = $request->query('month');
         $products = Product::withSum('inventoryBatches', 'quantity')
             ->orderBy('name')
             ->get();
 
-        return view('reports.inventory', compact('products'));
+        return view('reports.inventory', compact('products', 'month'));
     }
 
-    public function patientPurchases()
+    public function patientPurchases(Request $request)
     {
-        $sales = Sale::with(['patient', 'lineItems.inventoryBatch.product'])
+        $month = $request->query('month');
+        [$start, $end] = $this->resolveMonthRange($month);
+        $sales = Sale::with('patient')
+            ->withCount('lineItems')
+            ->when($start && $end, function ($query) use ($start, $end) {
+                $query->whereBetween('created_at', [$start, $end]);
+            })
             ->latest()
             ->paginate(20);
 
-        return view('reports.patient-purchases', compact('sales'));
+        return view('reports.patient-purchases', compact('sales', 'month'));
+    }
+
+    public function inventoryPdf(Request $request)
+    {
+        $month = $request->query('month');
+        $products = Product::withSum('inventoryBatches', 'quantity')
+            ->orderBy('name')
+            ->get();
+
+        $pdf = Pdf::loadView('reports.pdf.inventory', [
+            'products' => $products,
+            'month' => $month,
+            'exportedBy' => auth()->user()->name,
+            'exportedAt' => now(),
+        ])->setPaper('a4', 'portrait');
+
+        $fileMonth = $month ?: now()->format('Y-m');
+        return $pdf->download("inventory-report-{$fileMonth}.pdf");
+    }
+
+    public function patientPurchasesPdf(Request $request)
+    {
+        $month = $request->query('month');
+        [$start, $end] = $this->resolveMonthRange($month);
+        $sales = Sale::with('patient')
+            ->withCount('lineItems')
+            ->when($start && $end, function ($query) use ($start, $end) {
+                $query->whereBetween('created_at', [$start, $end]);
+            })
+            ->latest()
+            ->get();
+
+        $pdf = Pdf::loadView('reports.pdf.patient-purchases', [
+            'sales' => $sales,
+            'month' => $month,
+            'exportedBy' => auth()->user()->name,
+            'exportedAt' => now(),
+        ])->setPaper('a4', 'portrait');
+
+        $fileMonth = $month ?: now()->format('Y-m');
+        return $pdf->download("patient-purchases-{$fileMonth}.pdf");
+    }
+
+    private function resolveMonthRange(?string $month): array
+    {
+        if (! $month || ! preg_match('/^\d{4}-\d{2}$/', $month)) {
+            return [null, null];
+        }
+
+        $start = Carbon::createFromFormat('Y-m', $month)->startOfMonth();
+        $end = $start->copy()->endOfMonth();
+        return [$start, $end];
     }
 }

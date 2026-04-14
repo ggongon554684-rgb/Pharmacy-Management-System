@@ -15,7 +15,13 @@
             @if(session('error'))
                 <div class="alert alert-danger">{{ session('error') }}</div>
             @endif
-            <div class="card shadow-sm">
+            @if(($stockStatus ?? null) === 'low')
+                <div class="alert alert-warning d-flex justify-content-between align-items-center">
+                    <span>Showing products with low stock only.</span>
+                    <a href="{{ route('products.index') }}" class="btn btn-sm btn-outline-dark">Clear filter</a>
+                </div>
+            @endif
+            <div class="card ui-surface">
                 <div class="card-body">
                     <div class="table-responsive">
                         <table class="table table-striped align-middle mb-0">
@@ -24,7 +30,9 @@
                                     <th>Name</th>
                                     <th>SKU</th>
                                     <th>Price</th>
-                                    <th>Stock</th>
+                                    <th>Total Stock</th>
+                                    <th>Front Shop</th>
+                                    <th>Back Inventory</th>
                                     <th>Reorder At</th>
                                     <th style="width: 240px;">Actions</th>
                                 </tr>
@@ -32,6 +40,8 @@
                             <tbody>
                                 @forelse($products as $product)
                                     @php $stock = $product->inventory_batches_sum_quantity ?? 0; @endphp
+                                    @php $frontStock = $product->front_stock ?? 0; @endphp
+                                    @php $backStock = $product->back_stock ?? 0; @endphp
                                     <tr class="{{ $stock <= $product->reorder_level ? 'table-danger' : '' }}">
                                         <td>
                                             {{ $product->name }}
@@ -42,6 +52,8 @@
                                         <td>{{ $product->sku }}</td>
                                         <td>P{{ number_format($product->price, 2) }}</td>
                                         <td>{{ $stock }}</td>
+                                        <td><span class="badge text-bg-primary">{{ $frontStock }}</span></td>
+                                        <td><span class="badge text-bg-secondary">{{ $backStock }}</span></td>
                                         <td>{{ $product->reorder_level }}</td>
                                         <td>
                                             <a href="{{ route('products.show', $product) }}" class="btn btn-sm btn-info">View</a>
@@ -58,7 +70,7 @@
                                     </tr>
                                 @empty
                                     <tr>
-                                        <td colspan="6" class="text-center text-muted">No products yet.</td>
+                                        <td colspan="8" class="text-center text-muted">No products yet.</td>
                                     </tr>
                                 @endforelse
                             </tbody>
@@ -66,7 +78,7 @@
                     </div>
                 </div>
             </div>
-            <div class="mt-3">{{ $products->links() }}</div>
+            <div class="mt-3">{{ $products->appends(request()->query())->links() }}</div>
         </div>
     </div>
 </x-app-layout>

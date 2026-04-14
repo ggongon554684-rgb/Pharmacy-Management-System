@@ -21,6 +21,21 @@ class Product extends Model
     {
         return $this->hasMany(InventoryBatch::class);
     }
+
+    public function frontShopBatches()
+    {
+        return $this->hasMany(InventoryBatch::class)->whereHas('location', function ($query) {
+            $query->where('code', 'front');
+        });
+    }
+
+    public function backInventoryBatches()
+    {
+        return $this->hasMany(InventoryBatch::class)->whereHas('location', function ($query) {
+            $query->where('code', 'back');
+        });
+    }
+
     public function rxItems()
     {
         return $this->hasMany(RxItem::class);

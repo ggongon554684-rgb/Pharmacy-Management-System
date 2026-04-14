@@ -2,7 +2,11 @@
     <x-slot name="header"><h2 class="h4 mb-0">Create Purchase Order</h2></x-slot>
     <div class="py-4">
         <div class="container-fluid">
-            <div class="card shadow-sm">
+            <div class="mb-3">
+                <h5 class="module-title mb-1">New Procurement Request</h5>
+                <div class="module-subtitle">Prepare purchase details, expected date, and landed costs.</div>
+            </div>
+            <div class="card module-surface">
                 <div class="card-body">
                     @if ($errors->any())
                         <div class="alert alert-danger">{{ $errors->first() }}</div>
@@ -35,6 +39,20 @@
                         <div class="mb-3">
                             <label class="form-label">Notes</label>
                             <textarea name="notes" class="form-control" rows="3"></textarea>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">Delivery Cost</label>
+                                <input type="number" step="0.01" min="0" name="delivery_cost" class="form-control" value="{{ old('delivery_cost', 0) }}">
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">Insurance Cost</label>
+                                <input type="number" step="0.01" min="0" name="insurance_cost" class="form-control" value="{{ old('insurance_cost', 0) }}">
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">Other Cost</label>
+                                <input type="number" step="0.01" min="0" name="other_cost" class="form-control" value="{{ old('other_cost', 0) }}">
+                            </div>
                         </div>
                         <button type="submit" class="btn btn-primary">Submit PO</button>
                         <a href="{{ route('purchase-orders.index') }}" class="btn btn-outline-secondary">Cancel</a>

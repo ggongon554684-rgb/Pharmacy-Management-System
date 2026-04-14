@@ -12,6 +12,7 @@ use App\Models\InventoryBatch;
 use App\Models\Product;
 use App\Models\Sale;
 use App\Observers\AuditLogObserver;
+use Illuminate\Pagination\Paginator;
 
 
 class AppServiceProvider extends ServiceProvider
@@ -29,10 +30,12 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-    Product::observe(AuditLogObserver::class);
-    InventoryBatch::observe(AuditLogObserver::class);
-    Patient::observe(AuditLogObserver::class);
-    Prescription::observe(AuditLogObserver::class);
-    Sale::observe(AuditLogObserver::class);
+        Paginator::useBootstrapFive();
+
+        Product::observe(AuditLogObserver::class);
+        InventoryBatch::observe(AuditLogObserver::class);
+        Patient::observe(AuditLogObserver::class);
+        Prescription::observe(AuditLogObserver::class);
+        Sale::observe(AuditLogObserver::class);
     }
 }

@@ -8,11 +8,13 @@ Focus areas: inventory flow, patient records, purchase orders, stock movements, 
 - Product and inventory batch management
 - Patient management and patient purchase history
 - Purchase order creation, approval, and receiving
-- Stock request creation and fulfillment (FIFO deduction)
+- Stock request creation and fulfillment (FEFO deduction)
 - POS / medicine release flow
+- Optional prescription linkage for sales
 - Immutable stock movement tracking
 - Audit trail for key CRUD and flow actions
 - Role-based access control using Spatie Permission
+- Admin finance status board (revenue, purchase costs, gross estimate)
 
 ## Tech Stack
 
@@ -97,7 +99,7 @@ php artisan optimize:clear
 2. Admin approves PO
 3. Staff receives PO (creates batches + incoming stock movement)
 4. Pharmacist creates stock request when needed
-5. Staff fulfills stock request (FIFO from non-expired batches)
+5. Staff fulfills stock request (FEFO from non-expired batches)
 6. Pharmacist records sale (POS), stock is deducted, history is recorded
 7. Admin can override stock with PIN (audited)
 

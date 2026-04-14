@@ -2,16 +2,24 @@
 
 namespace App\Http\Controllers;
 
+use App\Exceptions\InsufficientStockException;
 use App\Models\AuditLog;
 use App\Models\InventoryBatch;
+use App\Models\InventoryLocation;
 use App\Models\Product;
 use App\Models\StockMovement;
 use App\Models\StockRequest;
+use App\Services\InventoryReleaseService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 
 class StockRequestController extends Controller
 {
+    public function __construct(private readonly InventoryReleaseService $inventoryReleaseService)
+    {
+    }
+
     public function index()
     {
         abort_unless(Gate::allows('create stock requests') || Gate::allows('approve stock release'), 403);
@@ -53,54 +61,81 @@ class StockRequestController extends Controller
             return back()->with('error', 'Only pending requests can be processed.');
         }
 
-        $batches = InventoryBatch::where('product_id', $stockRequest->product_id)
-            ->where('quantity', '>', 0)
-            ->whereDate('expiry_date', '>=', now()->toDateString())
-            ->orderBy('expiry_date')
-            ->get();
+        try {
+            DB::transaction(function () use ($stockRequest) {
+                $product = Product::findOrFail($stockRequest->product_id);
+                $backLocation = InventoryLocation::query()->where('code', 'back')->firstOrFail();
+                $frontLocation = InventoryLocation::query()->where('code', 'front')->firstOrFail();
+                $allocations = $this->inventoryReleaseService->releaseProduct(
+                    $stockRequest->product_id,
+                    $stockRequest->quantity,
+                    'stock_request',
+                    $product->name,
+                    'back'
+                );
 
-        $available = $batches->sum('quantity');
-        if ($available < $stockRequest->quantity) {
-            return back()->with('error', 'Insufficient stock to fulfill request.');
+                foreach ($allocations as $allocation) {
+                    $frontBatch = InventoryBatch::query()
+                        ->where('product_id', $stockRequest->product_id)
+                        ->where('location_id', $frontLocation->id)
+                        ->where('batch_number', $allocation['batch_number'])
+                        ->lockForUpdate()
+                        ->first();
+
+                    if ($frontBatch) {
+                        $frontBatch->increment('quantity', $allocation['quantity']);
+                    } else {
+                        $frontBatch = InventoryBatch::create([
+                            'product_id' => $stockRequest->product_id,
+                            'location_id' => $frontLocation->id,
+                            'batch_number' => $allocation['batch_number'],
+                            'quantity' => $allocation['quantity'],
+                            'cost_price' => $allocation['cost_price'] ?? 0,
+                            'expiry_date' => $allocation['expiry_date'],
+                        ]);
+                    }
+
+                    StockMovement::create([
+                        'product_id' => $stockRequest->product_id,
+                        'inventory_batch_id' => $allocation['inventory_batch_id'],
+                        'moved_by' => auth()->id(),
+                        'type' => 'release',
+                        'quantity' => $allocation['quantity'],
+                        'reference_type' => StockRequest::class,
+                        'reference_id' => $stockRequest->id,
+                        'notes' => "Transfer out: Back Inventory -> Front Shop ({$backLocation->code} to {$frontLocation->code})",
+                    ]);
+
+                    StockMovement::create([
+                        'product_id' => $stockRequest->product_id,
+                        'inventory_batch_id' => $frontBatch->id,
+                        'moved_by' => auth()->id(),
+                        'type' => 'incoming',
+                        'quantity' => $allocation['quantity'],
+                        'reference_type' => StockRequest::class,
+                        'reference_id' => $stockRequest->id,
+                        'notes' => "Transfer in: Back Inventory -> Front Shop ({$backLocation->code} to {$frontLocation->code})",
+                    ]);
+                }
+
+                $stockRequest->update([
+                    'approved_by' => auth()->id(),
+                    'status' => 'fulfilled',
+                ]);
+
+                AuditLog::create([
+                    'user_id' => auth()->id(),
+                    'action' => 'stock_request_fulfilled',
+                    'auditable_id' => $stockRequest->id,
+                    'auditable_type' => StockRequest::class,
+                    'old_values' => null,
+                    'new_values' => $stockRequest->fresh()->toArray(),
+                ]);
+            });
+        } catch (InsufficientStockException $exception) {
+            return back()->with('error', $exception->getMessage());
         }
 
-        $remaining = $stockRequest->quantity;
-        foreach ($batches as $batch) {
-            if ($remaining <= 0) {
-                break;
-            }
-
-            $deduct = min($batch->quantity, $remaining);
-            $batch->update(['quantity' => $batch->quantity - $deduct]);
-
-            StockMovement::create([
-                'product_id' => $stockRequest->product_id,
-                'inventory_batch_id' => $batch->id,
-                'moved_by' => auth()->id(),
-                'type' => 'release',
-                'quantity' => $deduct,
-                'reference_type' => StockRequest::class,
-                'reference_id' => $stockRequest->id,
-                'notes' => 'Stock request fulfilled',
-            ]);
-
-            $remaining -= $deduct;
-        }
-
-        $stockRequest->update([
-            'approved_by' => auth()->id(),
-            'status' => 'fulfilled',
-        ]);
-
-        AuditLog::create([
-            'user_id' => auth()->id(),
-            'action' => 'stock_request_fulfilled',
-            'auditable_id' => $stockRequest->id,
-            'auditable_type' => StockRequest::class,
-            'old_values' => null,
-            'new_values' => $stockRequest->fresh()->toArray(),
-        ]);
-
-        return back()->with('success', 'Stock release approved.');
+        return back()->with('success', 'Stock request approved and moved from Back Inventory to Front Shop.');
     }
 }

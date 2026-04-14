@@ -9,7 +9,7 @@
                 <div class="alert alert-danger">{{ session('error') }}</div>
             @endif
 
-            <div class="card shadow-sm mb-3">
+            <div class="card ui-surface mb-3">
                 <div class="card-body">
                     <div class="row g-3">
                         <div class="col-md-6"><strong>Generic Name:</strong> {{ $product->generic_name ?? '-' }}</div>
@@ -23,7 +23,7 @@
                 </div>
             </div>
 
-            <div class="card shadow-sm mb-3">
+            <div class="card ui-surface mb-3">
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <strong>Inventory Batches</strong>
                     <a href="{{ route('products.batches.create', $product) }}" class="btn btn-success btn-sm">Receive Stock</a>

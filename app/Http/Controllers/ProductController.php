@@ -8,13 +8,24 @@ use Illuminate\Http\Request;
 
 class ProductController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
+        $stockStatus = $request->query('stock_status');
+
         $products = Product::withSum('inventoryBatches', 'quantity')
+            ->withSum([
+                'inventoryBatches as front_stock' => fn ($query) => $query->forLocationCode('front'),
+            ], 'quantity')
+            ->withSum([
+                'inventoryBatches as back_stock' => fn ($query) => $query->forLocationCode('back'),
+            ], 'quantity')
+            ->when($stockStatus === 'low', function ($query) {
+                $query->whereRaw('COALESCE((SELECT SUM(quantity) FROM inventory_batches WHERE inventory_batches.product_id = products.id), 0) <= reorder_level');
+            })
             ->latest()
             ->paginate(15);
 
-        return view('products.index', compact('products'));
+        return view('products.index', compact('products', 'stockStatus'));
     }
 
     public function create()

@@ -8,6 +8,7 @@ use App\Models\Product;
 use App\Models\PurchaseOrder;
 use App\Models\StockMovement;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class PurchaseOrderController extends Controller
 {
@@ -31,7 +32,17 @@ class PurchaseOrderController extends Controller
             'product_id' => 'required|exists:products,id',
             'quantity' => 'required|integer|min:1',
             'unit_cost' => 'nullable|numeric|min:0',
+            'delivery_cost' => 'nullable|numeric|min:0',
+            'insurance_cost' => 'nullable|numeric|min:0',
+            'other_cost' => 'nullable|numeric|min:0',
         ]);
+
+        $unitCost = (float) ($validated['unit_cost'] ?? 0);
+        $itemSubtotal = ((int) $validated['quantity']) * $unitCost;
+        $deliveryCost = (float) ($validated['delivery_cost'] ?? 0);
+        $insuranceCost = (float) ($validated['insurance_cost'] ?? 0);
+        $otherCost = (float) ($validated['other_cost'] ?? 0);
+        $totalCost = $itemSubtotal + $deliveryCost + $insuranceCost + $otherCost;
 
         $po = PurchaseOrder::create([
             'po_number' => 'PO-' . now()->format('Ymd-His'),
@@ -39,6 +50,10 @@ class PurchaseOrderController extends Controller
             'status' => 'pending',
             'expected_date' => $validated['expected_date'] ?? null,
             'notes' => $validated['notes'] ?? null,
+            'delivery_cost' => $deliveryCost,
+            'insurance_cost' => $insuranceCost,
+            'other_cost' => $otherCost,
+            'total_cost' => $totalCost,
         ]);
 
         $po->items()->create([
@@ -95,38 +110,55 @@ class PurchaseOrderController extends Controller
             return back()->with('error', 'Only approved PO can be received.');
         }
 
-        $purchaseOrder->load('items');
+        $purchaseOrder->load('items.product');
         foreach ($purchaseOrder->items as $item) {
-            $batch = InventoryBatch::create([
-                'product_id' => $item->product_id,
-                'batch_number' => $validated['batch_number'] . '-' . $item->product_id,
-                'quantity' => $item->quantity,
-                'cost_price' => $item->unit_cost ?? 0,
-                'expiry_date' => $validated['expiry_date'],
-            ]);
+            $candidateBatchNumber = $validated['batch_number'] . '-' . $item->product_id;
+            $batchAlreadyExists = InventoryBatch::query()
+                ->where('product_id', $item->product_id)
+                ->where('batch_number', $candidateBatchNumber)
+                ->exists();
 
-            StockMovement::create([
-                'product_id' => $item->product_id,
-                'inventory_batch_id' => $batch->id,
-                'moved_by' => auth()->id(),
-                'type' => 'incoming',
-                'quantity' => $item->quantity,
-                'reference_type' => PurchaseOrder::class,
-                'reference_id' => $purchaseOrder->id,
-                'notes' => 'PO received',
-            ]);
+            if ($batchAlreadyExists) {
+                $productName = $item->product->name ?? "product #{$item->product_id}";
+                return back()->withErrors([
+                    'batch_number' => "Batch {$candidateBatchNumber} already exists for {$productName}. Use a different batch number.",
+                ])->withInput();
+            }
         }
 
-        $purchaseOrder->update(['status' => 'received']);
+        DB::transaction(function () use ($purchaseOrder, $validated) {
+            foreach ($purchaseOrder->items as $item) {
+                $batch = InventoryBatch::create([
+                    'product_id' => $item->product_id,
+                    'batch_number' => $validated['batch_number'] . '-' . $item->product_id,
+                    'quantity' => $item->quantity,
+                    'cost_price' => $item->unit_cost ?? 0,
+                    'expiry_date' => $validated['expiry_date'],
+                ]);
 
-        AuditLog::create([
-            'user_id' => auth()->id(),
-            'action' => 'po_received',
-            'auditable_id' => $purchaseOrder->id,
-            'auditable_type' => PurchaseOrder::class,
-            'old_values' => null,
-            'new_values' => $purchaseOrder->fresh()->toArray(),
-        ]);
+                StockMovement::create([
+                    'product_id' => $item->product_id,
+                    'inventory_batch_id' => $batch->id,
+                    'moved_by' => auth()->id(),
+                    'type' => 'incoming',
+                    'quantity' => $item->quantity,
+                    'reference_type' => PurchaseOrder::class,
+                    'reference_id' => $purchaseOrder->id,
+                    'notes' => 'PO received',
+                ]);
+            }
+
+            $purchaseOrder->update(['status' => 'received']);
+
+            AuditLog::create([
+                'user_id' => auth()->id(),
+                'action' => 'po_received',
+                'auditable_id' => $purchaseOrder->id,
+                'auditable_type' => PurchaseOrder::class,
+                'old_values' => null,
+                'new_values' => $purchaseOrder->fresh()->toArray(),
+            ]);
+        });
 
         return back()->with('success', 'PO received and stock added.');
     }

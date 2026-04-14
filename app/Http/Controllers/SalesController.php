@@ -2,29 +2,45 @@
 
 namespace App\Http\Controllers;
 
+use App\Exceptions\InsufficientStockException;
 use App\Models\AuditLog;
-use App\Models\InventoryBatch;
 use App\Models\Patient;
+use App\Models\Prescription;
 use App\Models\Product;
 use App\Models\Sale;
 use App\Models\SaleLineItem;
 use App\Models\StockMovement;
+use App\Services\InventoryReleaseService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 class SalesController extends Controller
 {
+    public function __construct(private readonly InventoryReleaseService $inventoryReleaseService)
+    {
+    }
+
     public function index()
     {
-        $sales = Sale::with('patient')->latest()->paginate(20);
+        $sales = Sale::with(['patient', 'user'])->latest()->paginate(20);
         return view('sales.index', compact('sales'));
     }
 
     public function create()
     {
         $patients = Patient::orderBy('name')->get();
-        $products = Product::withSum('inventoryBatches', 'quantity')->orderBy('name')->get();
-        return view('sales.create', compact('patients', 'products'));
+        $products = Product::query()
+            ->withSum([
+                'inventoryBatches as sellable_stock' => fn ($query) => $query->releasable()->forLocationCode('front'),
+            ], 'quantity')
+            ->orderBy('name')
+            ->get();
+        $prescriptions = Prescription::with(['patient', 'prescriber'])
+            ->where('status', 'active')
+            ->orderByDesc('issued_date')
+            ->get();
+
+        return view('sales.create', compact('patients', 'products', 'prescriptions'));
     }
 
     public function store(Request $request)
@@ -36,6 +52,7 @@ class SalesController extends Controller
             'patient_birthdate' => 'nullable|date|before:today',
             'patient_contact_info' => 'nullable|string|max:255',
             'patient_allergies' => 'nullable|string',
+            'prescription_id' => 'nullable|exists:prescriptions,id',
             'payment_method' => 'required|in:cash,card,insurance',
             'product_ids' => 'required|array|min:1',
             'product_ids.*' => 'required|exists:products,id',
@@ -53,106 +70,111 @@ class SalesController extends Controller
             }
         }
 
-        return DB::transaction(function () use ($validated) {
-            $lineEntries = [];
-            $totalAmount = 0;
+        if (! empty($validated['prescription_id']) && $validated['patient_mode'] === 'new') {
+            return back()->withErrors(['prescription_id' => 'Prescription can only be linked to an existing patient.'])->withInput();
+        }
 
-            foreach ($validated['product_ids'] as $idx => $productId) {
-                $requestedQty = (int) $validated['quantities'][$idx];
-                if ($requestedQty <= 0) {
-                    continue;
-                }
+        try {
+            return DB::transaction(function () use ($validated) {
+                $lineEntries = [];
+                $totalAmount = 0;
 
-                $product = Product::findOrFail($productId);
-                $batches = InventoryBatch::where('product_id', $productId)
-                    ->where('quantity', '>', 0)
-                    ->whereDate('expiry_date', '>=', now()->toDateString())
-                    ->orderBy('expiry_date')
-                    ->get();
-
-                $available = $batches->sum('quantity');
-                if ($available < $requestedQty) {
-                    return back()->withErrors([
-                        'product_ids.' . $idx => "Insufficient stock for {$product->name}. Requested {$requestedQty}, available {$available}.",
-                    ])->withInput();
-                }
-
-                $remaining = $requestedQty;
-                foreach ($batches as $batch) {
-                    if ($remaining <= 0) {
-                        break;
+                $requestedByProduct = [];
+                foreach ($validated['product_ids'] as $idx => $productId) {
+                    $requestedQty = (int) ($validated['quantities'][$idx] ?? 0);
+                    if ($requestedQty <= 0) {
+                        continue;
                     }
-                    $deduct = min($batch->quantity, $remaining);
-                    $lineEntries[] = [
-                        'inventory_batch_id' => $batch->id,
-                        'product_id' => $productId,
-                        'quantity' => $deduct,
-                        'unit_price' => $product->price,
-                        'subtotal' => $deduct * (float) $product->price,
-                    ];
-                    $totalAmount += $deduct * (float) $product->price;
-                    $remaining -= $deduct;
+                    $requestedByProduct[$productId] = ($requestedByProduct[$productId] ?? 0) + $requestedQty;
                 }
-            }
 
-            if (empty($lineEntries)) {
-                return back()->withErrors(['product_ids' => 'Please add at least one valid medicine line.'])->withInput();
-            }
+                foreach ($requestedByProduct as $productId => $requestedQty) {
+                    $product = Product::findOrFail($productId);
+                    $allocations = $this->inventoryReleaseService->releaseProduct(
+                        (int) $productId,
+                        $requestedQty,
+                        'product_ids',
+                        $product->name,
+                        'front'
+                    );
 
-            $patientId = $validated['patient_id'] ?? null;
-            if ($validated['patient_mode'] === 'new') {
-                $patient = Patient::create([
-                    'name' => $validated['patient_name'],
-                    'birthdate' => $validated['patient_birthdate'],
-                    'contact_info' => $validated['patient_contact_info'],
-                    'allergies' => $validated['patient_allergies'] ?? null,
+                    foreach ($allocations as $allocation) {
+                        $lineEntries[] = [
+                            'inventory_batch_id' => $allocation['inventory_batch_id'],
+                            'product_id' => (int) $productId,
+                            'quantity' => $allocation['quantity'],
+                            'unit_price' => $product->price,
+                            'subtotal' => $allocation['quantity'] * (float) $product->price,
+                        ];
+                        $totalAmount += $allocation['quantity'] * (float) $product->price;
+                    }
+                }
+
+                if (empty($lineEntries)) {
+                    return back()->withErrors(['product_ids' => 'Please add at least one valid medicine line.'])->withInput();
+                }
+
+                $patientId = $validated['patient_id'] ?? null;
+                if ($validated['patient_mode'] === 'new') {
+                    $patient = Patient::create([
+                        'name' => $validated['patient_name'],
+                        'birthdate' => $validated['patient_birthdate'],
+                        'contact_info' => $validated['patient_contact_info'],
+                        'allergies' => $validated['patient_allergies'] ?? null,
+                    ]);
+                    $patientId = $patient->id;
+                }
+
+                if (! empty($validated['prescription_id'])) {
+                    $prescription = Prescription::findOrFail($validated['prescription_id']);
+                    if ((int) $prescription->patient_id !== (int) $patientId) {
+                        return back()->withErrors(['prescription_id' => 'Selected prescription does not belong to the selected patient.'])->withInput();
+                    }
+                }
+
+                $sale = Sale::create([
+                    'user_id' => auth()->id(),
+                    'patient_id' => $patientId,
+                    'prescription_id' => $validated['prescription_id'] ?? null,
+                    'total_amount' => $totalAmount,
+                    'payment_method' => $validated['payment_method'],
                 ]);
-                $patientId = $patient->id;
-            }
 
-            $sale = Sale::create([
-                'user_id' => auth()->id(),
-                'patient_id' => $patientId,
-                'prescription_id' => null,
-                'total_amount' => $totalAmount,
-                'payment_method' => $validated['payment_method'],
-            ]);
+                foreach ($lineEntries as $entry) {
+                    SaleLineItem::create([
+                        'sale_id' => $sale->id,
+                        'inventory_batch_id' => $entry['inventory_batch_id'],
+                        'quantity' => $entry['quantity'],
+                        'unit_price' => $entry['unit_price'],
+                        'subtotal' => $entry['subtotal'],
+                    ]);
 
-            foreach ($lineEntries as $entry) {
-                $batch = InventoryBatch::findOrFail($entry['inventory_batch_id']);
-                $batch->update(['quantity' => $batch->quantity - $entry['quantity']]);
+                    StockMovement::create([
+                        'product_id' => $entry['product_id'],
+                        'inventory_batch_id' => $entry['inventory_batch_id'],
+                        'moved_by' => auth()->id(),
+                        'type' => 'release',
+                        'quantity' => $entry['quantity'],
+                        'reference_type' => Sale::class,
+                        'reference_id' => $sale->id,
+                        'notes' => 'Medicine released via POS',
+                    ]);
+                }
 
-                SaleLineItem::create([
-                    'sale_id' => $sale->id,
-                    'inventory_batch_id' => $entry['inventory_batch_id'],
-                    'quantity' => $entry['quantity'],
-                    'unit_price' => $entry['unit_price'],
-                    'subtotal' => $entry['subtotal'],
+                AuditLog::create([
+                    'user_id' => auth()->id(),
+                    'action' => 'sale_created',
+                    'auditable_id' => $sale->id,
+                    'auditable_type' => Sale::class,
+                    'old_values' => null,
+                    'new_values' => $sale->load('lineItems')->toArray(),
                 ]);
 
-                StockMovement::create([
-                    'product_id' => $entry['product_id'],
-                    'inventory_batch_id' => $entry['inventory_batch_id'],
-                    'moved_by' => auth()->id(),
-                    'type' => 'release',
-                    'quantity' => $entry['quantity'],
-                    'reference_type' => Sale::class,
-                    'reference_id' => $sale->id,
-                    'notes' => 'Medicine released via POS',
-                ]);
-            }
-
-            AuditLog::create([
-                'user_id' => auth()->id(),
-                'action' => 'sale_created',
-                'auditable_id' => $sale->id,
-                'auditable_type' => Sale::class,
-                'old_values' => null,
-                'new_values' => $sale->load('lineItems')->toArray(),
-            ]);
-
-            return redirect()->route('sales.show', $sale)->with('success', 'Sale recorded and stock released.');
-        });
+                return redirect()->route('sales.show', $sale)->with('success', 'Sale recorded and stock released using FEFO.');
+            });
+        } catch (InsufficientStockException $exception) {
+            return back()->withErrors([$exception->errorKey => $exception->getMessage()])->withInput();
+        }
     }
 
     public function show(Sale $sale)

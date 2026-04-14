@@ -16,10 +16,18 @@ class PurchaseOrder extends Model
         'status',
         'expected_date',
         'notes',
+        'delivery_cost',
+        'insurance_cost',
+        'other_cost',
+        'total_cost',
     ];
 
     protected $casts = [
         'expected_date' => 'date',
+        'delivery_cost' => 'decimal:2',
+        'insurance_cost' => 'decimal:2',
+        'other_cost' => 'decimal:2',
+        'total_cost' => 'decimal:2',
     ];
 
     public function items()

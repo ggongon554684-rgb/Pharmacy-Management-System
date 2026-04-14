@@ -3,6 +3,9 @@
     <div class="py-4">
         <div class="container-fluid">
             @if(session('success'))<div class="alert alert-success">{{ session('success') }}</div>@endif
+            <div class="mb-2 d-flex gap-2">
+                <button type="button" class="btn btn-sm btn-primary" id="print-receipt-btn">Print Receipt</button>
+            </div>
             <div class="card shadow-sm mb-3">
                 <div class="card-body">
                     <div class="row">
@@ -12,6 +15,7 @@
                     </div>
                     <div class="row mt-2">
                         <div class="col-md-4"><strong>Payment:</strong> {{ ucfirst($sale->payment_method) }}</div>
+                        <div class="col-md-4"><strong>Prescription:</strong> {{ $sale->prescription_id ? ('RX #' . $sale->prescription_id) : 'None' }}</div>
                         <div class="col-md-4"><strong>Total:</strong> {{ number_format($sale->total_amount, 2) }}</div>
                     </div>
                 </div>
@@ -41,4 +45,19 @@
             <a href="{{ route('sales.index') }}" class="btn btn-outline-secondary mt-3">Back</a>
         </div>
     </div>
+    <script>
+        (function () {
+            const printBtn = document.getElementById('print-receipt-btn');
+            if (printBtn) {
+                printBtn.addEventListener('click', function () {
+                    window.print();
+                });
+            }
+
+            const shouldPrint = new URLSearchParams(window.location.search).get('print');
+            if (shouldPrint === '1') {
+                setTimeout(function () { window.print(); }, 350);
+            }
+        })();
+    </script>
 </x-app-layout>

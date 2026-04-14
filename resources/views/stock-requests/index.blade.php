@@ -4,13 +4,19 @@
         <div class="container-fluid">
             @if(session('success'))<div class="alert alert-success">{{ session('success') }}</div>@endif
             @if(session('error'))<div class="alert alert-danger">{{ session('error') }}</div>@endif
-            @can('create stock requests')
-                <a href="{{ route('stock-requests.create') }}" class="btn btn-primary btn-sm mb-3">Request Medicine</a>
-            @endcan
-            <div class="card shadow-sm">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <div>
+                    <h5 class="module-title mb-1">Back to Front Requests</h5>
+                    <div class="module-subtitle">Review and fulfill transfer requests for front-shop replenishment.</div>
+                </div>
+                @can('create stock requests')
+                    <a href="{{ route('stock-requests.create') }}" class="btn btn-primary btn-sm">Request Medicine</a>
+                @endcan
+            </div>
+            <div class="card module-surface">
                 <div class="card-body">
-                    <table class="table table-striped mb-0">
-                        <thead class="table-dark">
+                    <table class="table table-hover mb-0 module-table">
+                        <thead>
                             <tr><th>Product</th><th>Qty</th><th>Status</th><th>Action</th></tr>
                         </thead>
                         <tbody>
@@ -19,18 +25,15 @@
                                     <td>{{ $request->product->name }}</td>
                                     <td>{{ $request->quantity }}</td>
                                     <td>
-                                        <span class="badge {{
-                                            $request->status === 'pending' ? 'bg-warning text-dark' :
-                                            ($request->status === 'fulfilled' ? 'bg-success' :
-                                            ($request->status === 'approved' ? 'bg-primary' : 'bg-secondary'))
-                                        }}">
-                                            {{ ucfirst($request->status) }}
-                                        </span>
+                                        @php
+                                            $statusClass = $request->status === 'pending' ? 'status-pending' : ($request->status === 'fulfilled' ? 'status-fulfilled' : ($request->status === 'approved' ? 'status-approved' : 'status-pending'));
+                                        @endphp
+                                        <span class="status-badge {{ $statusClass }}">{{ ucfirst($request->status) }}</span>
                                     </td>
                                     <td>
                                         @can('approve stock release')
                                             @if($request->status === 'pending')
-                                                <form method="POST" action="{{ route('stock-requests.approve', $request) }}">
+                                                <form method="POST" action="{{ route('stock-requests.approve', $request) }}" class="module-actions">
                                                     @csrf
                                                     <button type="submit" class="btn btn-success btn-sm">Approve & Fulfill</button>
                                                 </form>

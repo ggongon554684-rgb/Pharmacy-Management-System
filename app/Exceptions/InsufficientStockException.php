@@ -1,0 +1,15 @@
+<?php
+
+namespace App\Exceptions;
+
+use RuntimeException;
+
+class InsufficientStockException extends RuntimeException
+{
+    public function __construct(
+        public readonly string $errorKey,
+        string $message
+    ) {
+        parent::__construct($message);
+    }
+}

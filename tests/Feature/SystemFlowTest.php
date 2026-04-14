@@ -4,6 +4,10 @@ namespace Tests\Feature;
 
 use App\Models\Product;
 use App\Models\User;
+use App\Models\InventoryBatch;
+use App\Models\InventoryLocation;
+use App\Models\Patient;
+use App\Models\Sale;
 use Database\Seeders\RolesAndPermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
@@ -16,6 +20,7 @@ class SystemFlowTest extends TestCase
     public function test_role_based_core_flow_staff_pharmacist_admin(): void
     {
         $this->seed(RolesAndPermissionSeeder::class);
+        $frontLocation = InventoryLocation::query()->where('code', 'front')->firstOrFail();
 
         $staff = User::factory()->create([
             'email' => 'flow-staff@example.com',
@@ -57,6 +62,10 @@ class SystemFlowTest extends TestCase
             'cost_price' => 10.50,
             'expiry_date' => now()->addMonths(6)->toDateString(),
         ])->assertRedirect(route('products.show', $product));
+        InventoryBatch::query()
+            ->where('product_id', $product->id)
+            ->where('batch_number', 'FLOW-BATCH-001')
+            ->update(['location_id' => $frontLocation->id]);
 
         $this->post(route('purchase-orders.store'), [
             'product_id' => $product->id,
@@ -64,6 +73,9 @@ class SystemFlowTest extends TestCase
             'unit_cost' => 9.50,
             'expected_date' => now()->addDays(7)->toDateString(),
             'notes' => 'Test PO',
+            'delivery_cost' => 100,
+            'insurance_cost' => 25,
+            'other_cost' => 5,
         ])->assertRedirect(route('purchase-orders.index'));
 
         $po = \App\Models\PurchaseOrder::firstOrFail();
@@ -160,6 +172,7 @@ class SystemFlowTest extends TestCase
         $this->assertDatabaseHas('purchase_orders', [
             'id' => $po->id,
             'status' => 'received',
+            'total_cost' => 1080.00,
         ]);
 
         $this->assertDatabaseHas('audit_logs', [
@@ -181,5 +194,346 @@ class SystemFlowTest extends TestCase
 
         $this->post('/logout')->assertRedirect(route('login'));
         $this->assertGuest();
+    }
+
+    public function test_sale_can_be_linked_to_optional_prescription(): void
+    {
+        $this->seed(RolesAndPermissionSeeder::class);
+        $frontLocation = InventoryLocation::query()->where('code', 'front')->firstOrFail();
+
+        $pharmacist = User::factory()->create([
+            'email' => 'flow-pharmacist-rx@example.com',
+            'password' => Hash::make('password'),
+        ]);
+        $pharmacist->assignRole('pharmacist');
+
+        $patient = \App\Models\Patient::create([
+            'name' => 'Rx Patient',
+            'birthdate' => '1992-05-10',
+            'contact_info' => '09998887777',
+            'allergies' => null,
+        ]);
+
+        $prescriber = \App\Models\Prescriber::create([
+            'name' => 'Dr. Santos',
+            'license_number' => 'LIC-2026-001',
+            'contact_info' => 'clinic@example.com',
+        ]);
+
+        $prescription = \App\Models\Prescription::create([
+            'patient_id' => $patient->id,
+            'prescriber_id' => $prescriber->id,
+            'issued_date' => now()->toDateString(),
+            'status' => 'active',
+        ]);
+
+        $product = Product::create([
+            'name' => 'Rx Product',
+            'generic_name' => 'Amoxicillin',
+            'sku' => 'RX-SKU-001',
+            'price' => 12.00,
+            'reorder_level' => 5,
+        ]);
+
+        \App\Models\InventoryBatch::create([
+            'product_id' => $product->id,
+            'location_id' => $frontLocation->id,
+            'batch_number' => 'RX-BATCH-001',
+            'quantity' => 20,
+            'cost_price' => 7.00,
+            'expiry_date' => now()->addMonths(4)->toDateString(),
+        ]);
+
+        $this->post('/login', [
+            'email' => 'flow-pharmacist-rx@example.com',
+            'password' => 'password',
+        ])->assertRedirect('/dashboard');
+
+        $this->post(route('sales.store'), [
+            'patient_mode' => 'existing',
+            'patient_id' => $patient->id,
+            'prescription_id' => $prescription->id,
+            'payment_method' => 'cash',
+            'product_ids' => [$product->id],
+            'quantities' => [1],
+        ])->assertRedirect();
+
+        $sale = \App\Models\Sale::latest('id')->firstOrFail();
+        $this->assertDatabaseHas('sales', [
+            'id' => $sale->id,
+            'patient_id' => $patient->id,
+            'prescription_id' => $prescription->id,
+        ]);
+    }
+
+    public function test_sale_release_uses_fefo_and_accepts_cart_style_arrays(): void
+    {
+        $this->seed(RolesAndPermissionSeeder::class);
+        $frontLocation = InventoryLocation::query()->where('code', 'front')->firstOrFail();
+
+        $pharmacist = User::factory()->create([
+            'email' => 'fefo-pharmacist@example.com',
+            'password' => Hash::make('password'),
+        ]);
+        $pharmacist->assignRole('pharmacist');
+
+        $patient = Patient::create([
+            'name' => 'FEFO Patient',
+            'birthdate' => '1993-07-20',
+            'contact_info' => '09112223344',
+            'allergies' => null,
+        ]);
+
+        $product = Product::create([
+            'name' => 'FEFO Product',
+            'generic_name' => 'Cetirizine',
+            'sku' => 'FEFO-SKU-001',
+            'price' => 10.00,
+            'reorder_level' => 2,
+        ]);
+
+        $earliestBatch = InventoryBatch::create([
+            'product_id' => $product->id,
+            'location_id' => $frontLocation->id,
+            'batch_number' => 'FEFO-BATCH-OLD',
+            'quantity' => 2,
+            'cost_price' => 6.00,
+            'expiry_date' => now()->addDays(15)->toDateString(),
+        ]);
+
+        $laterBatch = InventoryBatch::create([
+            'product_id' => $product->id,
+            'location_id' => $frontLocation->id,
+            'batch_number' => 'FEFO-BATCH-NEW',
+            'quantity' => 5,
+            'cost_price' => 6.50,
+            'expiry_date' => now()->addDays(45)->toDateString(),
+        ]);
+
+        $this->post('/login', [
+            'email' => 'fefo-pharmacist@example.com',
+            'password' => 'password',
+        ])->assertRedirect('/dashboard');
+
+        $this->post(route('sales.store'), [
+            'patient_mode' => 'existing',
+            'patient_id' => $patient->id,
+            'payment_method' => 'cash',
+            'product_ids' => [$product->id, $product->id],
+            'quantities' => [1, 2],
+        ])->assertRedirect();
+
+        $sale = Sale::latest('id')->firstOrFail();
+        $this->assertDatabaseHas('sales', [
+            'id' => $sale->id,
+            'patient_id' => $patient->id,
+        ]);
+
+        $this->assertSame(3, (int) $sale->lineItems()->sum('quantity'));
+        $this->assertDatabaseHas('inventory_batches', [
+            'id' => $earliestBatch->id,
+            'quantity' => 0,
+        ]);
+        $this->assertDatabaseHas('inventory_batches', [
+            'id' => $laterBatch->id,
+            'quantity' => 4,
+        ]);
+    }
+
+    public function test_dashboard_low_stock_card_links_to_filtered_inventory(): void
+    {
+        $this->seed(RolesAndPermissionSeeder::class);
+
+        $admin = User::factory()->create([
+            'email' => 'lowstock-admin@example.com',
+            'password' => Hash::make('password'),
+        ]);
+        $admin->assignRole('admin');
+
+        $lowProduct = Product::create([
+            'name' => 'Low Stock Med',
+            'generic_name' => 'Loratadine',
+            'sku' => 'LOW-SKU-001',
+            'price' => 20.00,
+            'reorder_level' => 5,
+        ]);
+        InventoryBatch::create([
+            'product_id' => $lowProduct->id,
+            'batch_number' => 'LOW-BATCH',
+            'quantity' => 3,
+            'cost_price' => 12.00,
+            'expiry_date' => now()->addMonths(3)->toDateString(),
+        ]);
+
+        $okProduct = Product::create([
+            'name' => 'Sufficient Med',
+            'generic_name' => 'Ibuprofen',
+            'sku' => 'OK-SKU-001',
+            'price' => 25.00,
+            'reorder_level' => 5,
+        ]);
+        InventoryBatch::create([
+            'product_id' => $okProduct->id,
+            'batch_number' => 'OK-BATCH',
+            'quantity' => 10,
+            'cost_price' => 15.00,
+            'expiry_date' => now()->addMonths(3)->toDateString(),
+        ]);
+
+        $this->post('/login', [
+            'email' => 'lowstock-admin@example.com',
+            'password' => 'password',
+        ])->assertRedirect('/dashboard');
+
+        $dashboardResponse = $this->get(route('dashboard'));
+        $dashboardResponse->assertOk();
+        $dashboardResponse->assertSee(route('products.index', ['stock_status' => 'low']), false);
+
+        $filtered = $this->get(route('products.index', ['stock_status' => 'low']));
+        $filtered->assertOk();
+        $filtered->assertSee('Showing products with low stock only.');
+        $filtered->assertSee('Low Stock Med');
+        $filtered->assertDontSee('Sufficient Med');
+    }
+
+    public function test_sale_release_uses_front_shop_stock_only(): void
+    {
+        $this->seed(RolesAndPermissionSeeder::class);
+
+        $pharmacist = User::factory()->create([
+            'email' => 'front-only-pharmacist@example.com',
+            'password' => Hash::make('password'),
+        ]);
+        $pharmacist->assignRole('pharmacist');
+
+        $backLocation = InventoryLocation::query()->where('code', 'back')->firstOrFail();
+
+        $patient = Patient::create([
+            'name' => 'Front Shop Patient',
+            'birthdate' => '1994-07-20',
+            'contact_info' => '09112223311',
+            'allergies' => null,
+        ]);
+
+        $product = Product::create([
+            'name' => 'Front Only Product',
+            'generic_name' => 'Losartan',
+            'sku' => 'FRONT-SKU-001',
+            'price' => 18.00,
+            'reorder_level' => 2,
+        ]);
+
+        InventoryBatch::create([
+            'product_id' => $product->id,
+            'location_id' => $backLocation->id,
+            'batch_number' => 'BACK-ONLY-BATCH',
+            'quantity' => 5,
+            'cost_price' => 12.00,
+            'expiry_date' => now()->addDays(60)->toDateString(),
+        ]);
+
+        $this->post('/login', [
+            'email' => 'front-only-pharmacist@example.com',
+            'password' => 'password',
+        ])->assertRedirect('/dashboard');
+
+        $this->from(route('sales.create'))
+            ->post(route('sales.store'), [
+                'patient_mode' => 'existing',
+                'patient_id' => $patient->id,
+                'payment_method' => 'cash',
+                'product_ids' => [$product->id],
+                'quantities' => [1],
+            ])
+            ->assertRedirect(route('sales.create'))
+            ->assertSessionHasErrors('product_ids');
+
+        $this->assertDatabaseMissing('sales', [
+            'patient_id' => $patient->id,
+            'payment_method' => 'cash',
+        ]);
+    }
+
+    public function test_stock_request_approval_transfers_stock_from_back_to_front(): void
+    {
+        $this->seed(RolesAndPermissionSeeder::class);
+
+        $pharmacist = User::factory()->create([
+            'email' => 'transfer-pharmacist@example.com',
+            'password' => Hash::make('password'),
+        ]);
+        $pharmacist->assignRole('pharmacist');
+
+        $staff = User::factory()->create([
+            'email' => 'transfer-staff@example.com',
+            'password' => Hash::make('password'),
+        ]);
+        $staff->assignRole('staff');
+
+        $product = Product::create([
+            'name' => 'Transfer Product',
+            'generic_name' => 'Metformin',
+            'sku' => 'TRF-SKU-001',
+            'price' => 11.00,
+            'reorder_level' => 3,
+        ]);
+
+        $backLocation = InventoryLocation::query()->where('code', 'back')->firstOrFail();
+        $frontLocation = InventoryLocation::query()->where('code', 'front')->firstOrFail();
+
+        InventoryBatch::create([
+            'product_id' => $product->id,
+            'location_id' => $backLocation->id,
+            'batch_number' => 'TRF-BATCH-001',
+            'quantity' => 10,
+            'cost_price' => 6.00,
+            'expiry_date' => now()->addMonths(6)->toDateString(),
+        ]);
+
+        $this->post('/login', [
+            'email' => 'transfer-pharmacist@example.com',
+            'password' => 'password',
+        ])->assertRedirect('/dashboard');
+
+        $this->post(route('stock-requests.store'), [
+            'product_id' => $product->id,
+            'quantity' => 4,
+            'reason' => 'Front shop refill',
+        ])->assertRedirect(route('stock-requests.index'));
+
+        $stockRequest = \App\Models\StockRequest::latest('id')->firstOrFail();
+        $this->post('/logout')->assertRedirect(route('login'));
+
+        $this->post('/login', [
+            'email' => 'transfer-staff@example.com',
+            'password' => 'password',
+        ])->assertRedirect('/dashboard');
+
+        $this->post(route('stock-requests.approve', $stockRequest))->assertRedirect();
+
+        $this->assertDatabaseHas('inventory_batches', [
+            'product_id' => $product->id,
+            'location_id' => $backLocation->id,
+            'batch_number' => 'TRF-BATCH-001',
+            'quantity' => 6,
+        ]);
+        $this->assertDatabaseHas('inventory_batches', [
+            'product_id' => $product->id,
+            'location_id' => $frontLocation->id,
+            'batch_number' => 'TRF-BATCH-001',
+            'quantity' => 4,
+        ]);
+        $this->assertDatabaseHas('stock_movements', [
+            'product_id' => $product->id,
+            'type' => 'release',
+            'reference_type' => 'App\Models\StockRequest',
+            'reference_id' => $stockRequest->id,
+        ]);
+        $this->assertDatabaseHas('stock_movements', [
+            'product_id' => $product->id,
+            'type' => 'incoming',
+            'reference_type' => 'App\Models\StockRequest',
+            'reference_id' => $stockRequest->id,
+        ]);
     }
 }

@@ -2,10 +2,14 @@
     <x-slot name="header"><h2 class="h4 mb-0">Incoming Deliveries</h2></x-slot>
     <div class="py-4">
         <div class="container-fluid">
-            <div class="card shadow-sm">
+            <div class="mb-3">
+                <h5 class="module-title mb-1">Incoming Deliveries</h5>
+                <div class="module-subtitle">Monitor approved purchase orders waiting for receiving.</div>
+            </div>
+            <div class="card module-surface">
                 <div class="card-body">
-                    <table class="table table-striped align-middle mb-0">
-                        <thead class="table-dark">
+                    <table class="table table-hover align-middle mb-0 module-table">
+                        <thead>
                             <tr>
                                 <th>PO #</th>
                                 <th>Status</th>
@@ -18,12 +22,10 @@
                                 <tr>
                                     <td>{{ $po->po_number }}</td>
                                     <td>
-                                        <span class="badge {{ $po->status === 'received' ? 'bg-success' : 'bg-warning text-dark' }}">
-                                            {{ ucfirst($po->status) }}
-                                        </span>
+                                        <span class="status-badge {{ $po->status === 'received' ? 'status-received' : 'status-pending' }}">{{ ucfirst($po->status) }}</span>
                                     </td>
                                     <td>{{ $po->expected_date?->format('M d, Y') ?? '-' }}</td>
-                                    <td><a href="{{ route('purchase-orders.show', $po) }}" class="btn btn-sm btn-info">Open</a></td>
+                                    <td><a href="{{ route('purchase-orders.show', $po) }}" class="btn btn-sm btn-outline-primary">Open</a></td>
                                 </tr>
                             @empty
                                 <tr><td colspan="4" class="text-center text-muted">No incoming deliveries.</td></tr>

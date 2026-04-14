@@ -1,1 +1,58 @@
 @import "bootstrap/dist/css/bootstrap.min.css";
+@import "./dashboard.css";
+
+:root {
+    --brand-primary: #2563eb;
+    --brand-primary-soft: #dbeafe;
+    --brand-health: #16a34a;
+    --brand-health-soft: #dcfce7;
+    --brand-warning: #d97706;
+    --brand-warning-soft: #fef3c7;
+    --brand-danger: #dc2626;
+    --brand-danger-soft: #fee2e2;
+    --surface-bg: #f8fafc;
+    --surface-card: #ffffff;
+    --text-main: #0f172a;
+    --text-muted: #64748b;
+    --border-soft: #dce5f0;
+}
+
+.app-shell {
+    background: var(--surface-bg);
+}
+
+.app-main {
+    margin-left: 74px;
+    transition: margin-left 0.2s ease;
+}
+
+@media (max-width: 991.98px) {
+    .app-main {
+        margin-left: 0;
+    }
+}
+
+.app-header {
+    background: rgba(255, 255, 255, 0.85);
+    border-bottom: 1px solid var(--border-soft);
+    backdrop-filter: blur(6px);
+}
+
+.app-footer {
+    border-top: 1px solid var(--border-soft);
+    background: var(--surface-card);
+    color: var(--text-muted);
+    font-size: 0.9rem;
+}
+
+.ui-surface {
+    background: var(--surface-card);
+    border: 1px solid var(--border-soft);
+    border-radius: 14px;
+    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
+}
+
+.ui-section-title {
+    color: var(--text-main);
+    font-weight: 700;
+}

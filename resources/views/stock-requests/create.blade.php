@@ -2,7 +2,11 @@
     <x-slot name="header"><h2 class="h4 mb-0">Request Stock</h2></x-slot>
     <div class="py-4">
         <div class="container-fluid">
-            <div class="card shadow-sm">
+            <div class="mb-3">
+                <h5 class="module-title mb-1">Create Replenishment Request</h5>
+                <div class="module-subtitle">Send a front-shop refill request to back inventory staff.</div>
+            </div>
+            <div class="card module-surface">
                 <div class="card-body">
                     @if ($errors->any())
                         <div class="alert alert-danger">{{ $errors->first() }}</div>

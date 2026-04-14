@@ -13,6 +13,7 @@ use App\Http\Controllers\StockRequestController;
 use App\Http\Controllers\SalesController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\PreOrderController;
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\Auth\RegisteredUserController;
 
@@ -30,6 +31,10 @@ use App\Http\Controllers\Auth\RegisteredUserController;
 Route::get('/', function () {
     return redirect()->route('login');
 });
+
+Route::get('/kiosk-order', [PreOrderController::class, 'createPublic'])->name('public.kiosk-order');
+Route::post('/kiosk-order', [PreOrderController::class, 'storePublic'])->name('public.kiosk-order.store');
+Route::get('/kiosk-order/ticket/{preOrder}', [PreOrderController::class, 'showTicket'])->name('public.kiosk-order.ticket');
 
 Route::middleware('guest')->group(function () {
     Route::get('/login', [AuthenticatedSessionController::class, 'create'])->name('login');
@@ -100,9 +105,15 @@ Route::middleware('auth')->group(function () {
     Route::get('reports/inventory', [ReportController::class, 'inventory'])
         ->middleware('can:view reports')
         ->name('reports.inventory');
+    Route::get('reports/inventory/export-pdf', [ReportController::class, 'inventoryPdf'])
+        ->middleware('can:view reports')
+        ->name('reports.inventory.pdf');
     Route::get('reports/patient-purchases', [ReportController::class, 'patientPurchases'])
         ->middleware('can:view reports')
         ->name('reports.patient-purchases');
+    Route::get('reports/patient-purchases/export-pdf', [ReportController::class, 'patientPurchasesPdf'])
+        ->middleware('can:view reports')
+        ->name('reports.patient-purchases.pdf');
 
     Route::get('sales', [SalesController::class, 'index'])
         ->middleware('can:view sales')
@@ -116,6 +127,10 @@ Route::middleware('auth')->group(function () {
     Route::get('sales/{sale}', [SalesController::class, 'show'])
         ->middleware('can:view sales')
         ->name('sales.show');
+
+    Route::get('pre-orders/{preOrder}/scan', [PreOrderController::class, 'scanAndCreateSale'])
+        ->middleware(['signed', 'can:create sales'])
+        ->name('pre-orders.scan');
 
     Route::get('stock-movements', [StockMovementController::class, 'index'])
         ->middleware('can:view stock movements')

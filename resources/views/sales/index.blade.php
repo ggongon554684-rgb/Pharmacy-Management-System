@@ -10,7 +10,7 @@
     <div class="py-4">
         <div class="container-fluid">
             @if(session('success'))<div class="alert alert-success">{{ session('success') }}</div>@endif
-            <div class="card shadow-sm">
+            <div class="card ui-surface">
                 <div class="card-body">
                     <div class="table-responsive">
                         <table class="table table-striped align-middle mb-0">
