@@ -85,6 +85,7 @@ class RolesAndPermissionSeeder extends Seeder
         'view incoming deliveries',
         'override stock',
         'view patients',
+        'view prescriptions',
         'view audit logs',
         'view purchase orders',
         'view products',

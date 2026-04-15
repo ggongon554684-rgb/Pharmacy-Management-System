@@ -33,6 +33,12 @@ class SalesController extends Controller
             ->withSum([
                 'inventoryBatches as sellable_stock' => fn ($query) => $query->releasable()->forLocationCode('front'),
             ], 'quantity')
+            ->withSum([
+                'inventoryBatches as front_stock' => fn ($query) => $query->forLocationCode('front'),
+            ], 'quantity')
+            ->withSum([
+                'inventoryBatches as back_stock' => fn ($query) => $query->forLocationCode('back'),
+            ], 'quantity')
             ->orderBy('name')
             ->get();
         $prescriptions = Prescription::with(['patient', 'prescriber'])
@@ -129,6 +135,47 @@ class SalesController extends Controller
                     $prescription = Prescription::findOrFail($validated['prescription_id']);
                     if ((int) $prescription->patient_id !== (int) $patientId) {
                         return back()->withErrors(['prescription_id' => 'Selected prescription does not belong to the selected patient.'])->withInput();
+                    }
+                    if ($prescription->status !== 'active') {
+                        return back()->withErrors(['prescription_id' => 'Only active prescriptions can be linked to sales.'])->withInput();
+                    }
+
+                    $prescription->load('prescriptionItems.product');
+                    if ($prescription->prescriptionItems->isNotEmpty()) {
+                        $remainingByProduct = $prescription->remainingByProduct();
+                        $rxMap = $prescription->prescriptionItems->keyBy('product_id');
+                        $violations = [];
+                        foreach ($requestedByProduct as $productId => $requestedQty) {
+                            $item = $rxMap->get($productId);
+                            if (! $item) {
+                                $violations[] = "Product ID {$productId} is not listed in the selected prescription.";
+                                continue;
+                            }
+
+                            $remainingQty = (int) ($remainingByProduct[$productId] ?? 0);
+                            if ($requestedQty > $remainingQty) {
+                                $violations[] = "{$item->product?->name} exceeds remaining RX quantity ({$remainingQty}).";
+                            }
+                        }
+
+                        if (! empty($violations)) {
+                            $mode = strtolower((string) config('rx.dispense_enforcement', 'block'));
+                            if ($mode === 'warn') {
+                                AuditLog::create([
+                                    'user_id' => auth()->id(),
+                                    'action' => 'rx_dispense_warning_override',
+                                    'auditable_id' => $prescription->id,
+                                    'auditable_type' => Prescription::class,
+                                    'old_values' => null,
+                                    'new_values' => [
+                                        'violations' => $violations,
+                                        'requested_by_product' => $requestedByProduct,
+                                    ],
+                                ]);
+                            } else {
+                                return back()->withErrors(['prescription_id' => implode(' ', $violations)])->withInput();
+                            }
+                        }
                     }
                 }
 

@@ -14,8 +14,18 @@ class StockRequest extends Model
         'approved_by',
         'product_id',
         'quantity',
+        'requested_quantity',
+        'approved_quantity',
         'status',
         'reason',
+        'adjustment_reason',
+        'approved_at',
+        'fulfilled_at',
+    ];
+
+    protected $casts = [
+        'approved_at' => 'datetime',
+        'fulfilled_at' => 'datetime',
     ];
 
     public function product()

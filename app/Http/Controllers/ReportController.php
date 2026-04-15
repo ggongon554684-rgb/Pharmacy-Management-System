@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
 use App\Models\Product;
+use App\Models\Prescription;
 use App\Models\Sale;
 use Illuminate\Http\Request;
 
@@ -74,6 +75,17 @@ class ReportController extends Controller
 
         $fileMonth = $month ?: now()->format('Y-m');
         return $pdf->download("patient-purchases-{$fileMonth}.pdf");
+    }
+
+    public function prescriptions(Request $request)
+    {
+        $status = $request->query('status');
+        $prescriptions = Prescription::with(['patient', 'prescriber', 'prescriptionItems'])
+            ->when($status, fn ($query) => $query->where('status', $status))
+            ->latest()
+            ->paginate(20);
+
+        return view('reports.prescriptions', compact('prescriptions', 'status'));
     }
 
     private function resolveMonthRange(?string $month): array

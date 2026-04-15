@@ -104,6 +104,10 @@
             @can('view patients')
                 <a class="side-nav-link {{ request()->routeIs('patients.*') ? 'active' : '' }}" href="{{ route('patients.index') }}"><i class="bi bi-people"></i><span class="side-nav-label">Patients</span></a>
             @endcan
+            @can('view prescriptions')
+                <a class="side-nav-link {{ request()->routeIs('prescriptions.*') ? 'active' : '' }}" href="{{ route('prescriptions.index') }}"><i class="bi bi-file-medical"></i><span class="side-nav-label">Prescriptions</span></a>
+                <a class="side-nav-link {{ request()->routeIs('prescribers.*') ? 'active' : '' }}" href="{{ route('prescribers.index') }}"><i class="bi bi-person-vcard"></i><span class="side-nav-label">Prescribers</span></a>
+            @endcan
             @can('create stock requests')
                 <a class="side-nav-link {{ request()->routeIs('stock-requests.*') ? 'active' : '' }}" href="{{ route('stock-requests.index') }}"><i class="bi bi-box-arrow-in-down"></i><span class="side-nav-label">Stock Requests</span></a>
             @endcan
@@ -179,6 +183,10 @@
                     @endcan
                     @can('view patients')
                         <li class="nav-item"><a class="nav-link {{ request()->routeIs('patients.*') ? 'active' : '' }}" href="{{ route('patients.index') }}">Patients</a></li>
+                    @endcan
+                    @can('view prescriptions')
+                        <li class="nav-item"><a class="nav-link {{ request()->routeIs('prescriptions.*') ? 'active' : '' }}" href="{{ route('prescriptions.index') }}">Prescriptions</a></li>
+                        <li class="nav-item"><a class="nav-link {{ request()->routeIs('prescribers.*') ? 'active' : '' }}" href="{{ route('prescribers.index') }}">Prescribers</a></li>
                     @endcan
                 @elseif($isStaff)
                     @can('view products')

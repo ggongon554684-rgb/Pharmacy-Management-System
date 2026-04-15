@@ -544,3 +544,52 @@
     background: #dcfce7;
     border-color: #bbf7d0;
 }
+
+.status-danger {
+    color: #991b1b;
+    background: #fee2e2;
+    border-color: #fecaca;
+}
+
+.approval-warning-cell {
+    background: #fff7ed;
+}
+
+.approval-qty-input {
+    width: 90px;
+}
+
+.pos-panel {
+    border-radius: 14px;
+    border: 1px solid var(--border-soft);
+    background: #fff;
+}
+
+.pos-card {
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.pos-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 18px rgba(15, 23, 42, 0.08);
+}
+
+.pos-cart-sticky {
+    position: sticky;
+    top: 92px;
+}
+
+.pos-qty-chip {
+    font-size: 0.74rem;
+    padding: 0.15rem 0.42rem;
+    border-radius: 999px;
+    border: 1px solid var(--border-soft);
+    background: #fff;
+}
+
+.pos-toolbar {
+    background: #f8fafc;
+    border: 1px solid var(--border-soft);
+    border-radius: 12px;
+    padding: 0.65rem;
+}

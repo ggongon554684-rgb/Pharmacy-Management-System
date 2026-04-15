@@ -42,6 +42,9 @@ Focus areas: inventory flow, patient records, purchase orders, stock movements, 
   - View incoming deliveries and stock movements
   - Perform stock override (with admin PIN)
   - View patients and audit logs
+  `Customers`
+  http://127.0.0.1:8000/kiosk-order
+  
 
 ## Setup
 

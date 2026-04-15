@@ -1,13 +1,5 @@
 <x-app-layout>
     <x-slot name="header"><h2 class="h4 mb-0">Release Medicine (POS)</h2></x-slot>
-    <style>
-        .pos-panel { border-radius: 14px; border: 1px solid var(--border-soft); background: #fff; }
-        .pos-card { transition: transform 0.15s ease, box-shadow 0.15s ease; }
-        .pos-card:hover { transform: translateY(-2px); box-shadow: 0 8px 18px rgba(15, 23, 42, 0.08); }
-        .pos-cart-sticky { position: sticky; top: 92px; }
-        .pos-qty-chip { font-size: 0.74rem; padding: 0.15rem 0.42rem; border-radius: 999px; border: 1px solid var(--border-soft); background: #fff; }
-        .pos-toolbar { background: #f8fafc; border: 1px solid var(--border-soft); border-radius: 12px; padding: 0.65rem; }
-    </style>
     <div class="py-4">
         <div class="container-fluid">
             @if($errors->any())<div class="alert alert-danger">{{ $errors->first() }}</div>@endif
@@ -90,7 +82,11 @@
                             <div class="col-lg-8">
                                 <div class="row g-3" id="medicine-cards">
                                     @foreach($products as $product)
-                                        @php $stock = (int) ($product->sellable_stock ?? 0); @endphp
+                                        @php
+                                            $stock = (int) ($product->sellable_stock ?? 0);
+                                            $frontStock = (int) ($product->front_stock ?? 0);
+                                            $backStock = (int) ($product->back_stock ?? 0);
+                                        @endphp
                                         <div class="col-md-6 col-xl-4">
                                             <div class="card pos-card h-100 border {{ $stock <= 0 ? 'border-danger-subtle bg-light' : 'border-primary-subtle' }}" data-name="{{ strtolower($product->name) }}" data-generic="{{ strtolower($product->generic_name ?? '') }}">
                                                 <div class="card-body d-flex flex-column">
@@ -110,6 +106,7 @@
                                                         <span class="badge {{ $stock <= 0 ? 'text-bg-danger' : ($stock <= $product->reorder_level ? 'text-bg-warning' : 'text-bg-success') }}">Stock: {{ $stock }}</span>
                                                         <span class="fw-semibold">P{{ number_format($product->price, 2) }}</span>
                                                     </div>
+                                                    <small class="text-muted d-block mb-2">Front: {{ $frontStock }} | Back: {{ $backStock }}</small>
                                                     <div class="d-flex gap-1 mb-2">
                                                         <button type="button" class="pos-qty-chip quick-add" data-quick-qty="1">+1</button>
                                                         <button type="button" class="pos-qty-chip quick-add" data-quick-qty="2">+2</button>

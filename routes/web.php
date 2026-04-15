@@ -14,6 +14,8 @@ use App\Http\Controllers\SalesController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\PreOrderController;
+use App\Http\Controllers\PrescriberController;
+use App\Http\Controllers\PrescriptionController;
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\Auth\RegisteredUserController;
 
@@ -114,6 +116,9 @@ Route::middleware('auth')->group(function () {
     Route::get('reports/patient-purchases/export-pdf', [ReportController::class, 'patientPurchasesPdf'])
         ->middleware('can:view reports')
         ->name('reports.patient-purchases.pdf');
+    Route::get('reports/prescriptions', [ReportController::class, 'prescriptions'])
+        ->middleware('can:view reports')
+        ->name('reports.prescriptions');
 
     Route::get('sales', [SalesController::class, 'index'])
         ->middleware('can:view sales')
@@ -127,6 +132,22 @@ Route::middleware('auth')->group(function () {
     Route::get('sales/{sale}', [SalesController::class, 'show'])
         ->middleware('can:view sales')
         ->name('sales.show');
+
+    Route::get('prescribers', [PrescriberController::class, 'index'])->middleware('can:view prescriptions')->name('prescribers.index');
+    Route::get('prescribers/create', [PrescriberController::class, 'create'])->middleware('can:create prescriptions')->name('prescribers.create');
+    Route::post('prescribers', [PrescriberController::class, 'store'])->middleware('can:create prescriptions')->name('prescribers.store');
+    Route::get('prescribers/{prescriber}', [PrescriberController::class, 'show'])->middleware('can:view prescriptions')->name('prescribers.show');
+    Route::get('prescribers/{prescriber}/edit', [PrescriberController::class, 'edit'])->middleware('can:edit prescriptions')->name('prescribers.edit');
+    Route::patch('prescribers/{prescriber}', [PrescriberController::class, 'update'])->middleware('can:edit prescriptions')->name('prescribers.update');
+    Route::delete('prescribers/{prescriber}', [PrescriberController::class, 'destroy'])->middleware('can:delete prescriptions')->name('prescribers.destroy');
+
+    Route::get('prescriptions', [PrescriptionController::class, 'index'])->middleware('can:view prescriptions')->name('prescriptions.index');
+    Route::get('prescriptions/create', [PrescriptionController::class, 'create'])->middleware('can:create prescriptions')->name('prescriptions.create');
+    Route::post('prescriptions', [PrescriptionController::class, 'store'])->middleware('can:create prescriptions')->name('prescriptions.store');
+    Route::get('prescriptions/{prescription}', [PrescriptionController::class, 'show'])->middleware('can:view prescriptions')->name('prescriptions.show');
+    Route::get('prescriptions/{prescription}/edit', [PrescriptionController::class, 'edit'])->middleware('can:edit prescriptions')->name('prescriptions.edit');
+    Route::patch('prescriptions/{prescription}', [PrescriptionController::class, 'update'])->middleware('can:edit prescriptions')->name('prescriptions.update');
+    Route::delete('prescriptions/{prescription}', [PrescriptionController::class, 'destroy'])->middleware('can:delete prescriptions')->name('prescriptions.destroy');
 
     Route::get('pre-orders/{preOrder}/scan', [PreOrderController::class, 'scanAndCreateSale'])
         ->middleware(['signed', 'can:create sales'])

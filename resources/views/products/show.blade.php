@@ -19,6 +19,8 @@
                             <strong>Total Stock:</strong>
                             <span class="{{ $lowStock ? 'text-danger' : 'text-success' }}">{{ $totalStock }}</span>
                         </div>
+                        <div class="col-md-6"><strong>Front Stock:</strong> {{ $frontStock }}</div>
+                        <div class="col-md-6"><strong>Back Stock:</strong> {{ $backStock }}</div>
                     </div>
                 </div>
             </div>
@@ -38,6 +40,7 @@
                                     <th>Cost Price</th>
                                     <th>Expiry</th>
                                     <th>Status</th>
+                                    <th>Location</th>
                                     <th>Action</th>
                                 </tr>
                             </thead>
@@ -58,6 +61,7 @@
                                                 <span class="badge bg-success">Good</span>
                                             @endif
                                         </td>
+                                        <td>{{ strtoupper($batch->location?->code ?? '-') }}</td>
                                         <td>
                                             <form action="{{ route('products.batches.destroy', [$product, $batch]) }}" method="POST" onsubmit="return confirm('Remove this batch?')">
                                                 @csrf @method('DELETE')
@@ -75,7 +79,7 @@
                                     </tr>
                                 @empty
                                     <tr>
-                                        <td colspan="6" class="text-center text-muted">No batches. Receive stock to get started.</td>
+                                        <td colspan="7" class="text-center text-muted">No batches. Receive stock to get started.</td>
                                     </tr>
                                 @endforelse
                             </tbody>

@@ -7,6 +7,7 @@ use App\Models\User;
 use App\Models\InventoryBatch;
 use App\Models\InventoryLocation;
 use App\Models\Patient;
+use App\Models\Prescription;
 use App\Models\Sale;
 use Database\Seeders\RolesAndPermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -509,7 +510,9 @@ class SystemFlowTest extends TestCase
             'password' => 'password',
         ])->assertRedirect('/dashboard');
 
-        $this->post(route('stock-requests.approve', $stockRequest))->assertRedirect();
+        $this->post(route('stock-requests.approve', $stockRequest), [
+            'approved_quantity' => 4,
+        ])->assertRedirect();
 
         $this->assertDatabaseHas('inventory_batches', [
             'product_id' => $product->id,
@@ -534,6 +537,208 @@ class SystemFlowTest extends TestCase
             'type' => 'incoming',
             'reference_type' => 'App\Models\StockRequest',
             'reference_id' => $stockRequest->id,
+        ]);
+    }
+
+    public function test_stock_request_approval_can_adjust_requested_quantity_before_fulfill(): void
+    {
+        $this->seed(RolesAndPermissionSeeder::class);
+
+        $pharmacist = User::factory()->create([
+            'email' => 'adjust-pharmacist@example.com',
+            'password' => Hash::make('password'),
+        ]);
+        $pharmacist->assignRole('pharmacist');
+
+        $staff = User::factory()->create([
+            'email' => 'adjust-staff@example.com',
+            'password' => Hash::make('password'),
+        ]);
+        $staff->assignRole('staff');
+
+        $product = Product::create([
+            'name' => 'Adjust Product',
+            'generic_name' => 'Amlodipine',
+            'sku' => 'ADJ-SKU-001',
+            'price' => 9.00,
+            'reorder_level' => 3,
+        ]);
+
+        $backLocation = InventoryLocation::query()->where('code', 'back')->firstOrFail();
+        $frontLocation = InventoryLocation::query()->where('code', 'front')->firstOrFail();
+
+        InventoryBatch::create([
+            'product_id' => $product->id,
+            'location_id' => $backLocation->id,
+            'batch_number' => 'ADJ-BATCH-001',
+            'quantity' => 20,
+            'cost_price' => 5.00,
+            'expiry_date' => now()->addMonths(6)->toDateString(),
+        ]);
+
+        $this->post('/login', [
+            'email' => 'adjust-pharmacist@example.com',
+            'password' => 'password',
+        ])->assertRedirect('/dashboard');
+
+        $this->post(route('stock-requests.store'), [
+            'product_id' => $product->id,
+            'quantity' => 10,
+            'reason' => 'Front refill request',
+        ])->assertRedirect(route('stock-requests.index'));
+
+        $stockRequest = \App\Models\StockRequest::latest('id')->firstOrFail();
+        $this->post('/logout')->assertRedirect(route('login'));
+
+        $this->post('/login', [
+            'email' => 'adjust-staff@example.com',
+            'password' => 'password',
+        ])->assertRedirect('/dashboard');
+
+        $this->post(route('stock-requests.approve', $stockRequest), [
+            'approved_quantity' => 6,
+            'adjustment_reason' => 'Limited stock for today',
+        ])->assertRedirect();
+
+        $this->assertDatabaseHas('stock_requests', [
+            'id' => $stockRequest->id,
+            'quantity' => 10,
+            'requested_quantity' => 10,
+            'approved_quantity' => 6,
+            'status' => 'fulfilled',
+        ]);
+        $this->assertDatabaseHas('inventory_batches', [
+            'product_id' => $product->id,
+            'location_id' => $backLocation->id,
+            'batch_number' => 'ADJ-BATCH-001',
+            'quantity' => 14,
+        ]);
+        $this->assertDatabaseHas('inventory_batches', [
+            'product_id' => $product->id,
+            'location_id' => $frontLocation->id,
+            'batch_number' => 'ADJ-BATCH-001',
+            'quantity' => 6,
+        ]);
+    }
+
+    public function test_sale_blocks_overdispense_when_rx_enforcement_is_block(): void
+    {
+        config()->set('rx.dispense_enforcement', 'block');
+        $this->seed(RolesAndPermissionSeeder::class);
+        $frontLocation = InventoryLocation::query()->where('code', 'front')->firstOrFail();
+
+        $pharmacist = User::factory()->create();
+        $pharmacist->assignRole('pharmacist');
+
+        $patient = Patient::create([
+            'name' => 'RX Block Patient',
+            'birthdate' => '1990-01-01',
+            'contact_info' => '09990001111',
+        ]);
+        $prescriber = \App\Models\Prescriber::create([
+            'name' => 'RX Block Prescriber',
+            'license_number' => 'RX-BLOCK-001',
+            'contact_info' => 'rx-block@example.com',
+        ]);
+        $product = Product::create([
+            'name' => 'RX Block Product',
+            'generic_name' => 'Cefalexin',
+            'sku' => 'RX-BLOCK-SKU',
+            'price' => 10,
+            'reorder_level' => 2,
+        ]);
+        $prescription = Prescription::create([
+            'patient_id' => $patient->id,
+            'prescriber_id' => $prescriber->id,
+            'issued_date' => now()->toDateString(),
+            'status' => 'active',
+        ]);
+        $prescription->prescriptionItems()->create([
+            'product_id' => $product->id,
+            'dosage' => '1 tab daily',
+            'quantity' => 1,
+        ]);
+        InventoryBatch::create([
+            'product_id' => $product->id,
+            'location_id' => $frontLocation->id,
+            'batch_number' => 'RX-BLOCK-BATCH',
+            'quantity' => 10,
+            'cost_price' => 2,
+            'expiry_date' => now()->addMonths(3)->toDateString(),
+        ]);
+
+        $this->actingAs($pharmacist)
+            ->from(route('sales.create'))
+            ->post(route('sales.store'), [
+                'patient_mode' => 'existing',
+                'patient_id' => $patient->id,
+                'prescription_id' => $prescription->id,
+                'payment_method' => 'cash',
+                'product_ids' => [$product->id],
+                'quantities' => [2],
+            ])
+            ->assertRedirect(route('sales.create'))
+            ->assertSessionHasErrors('prescription_id');
+    }
+
+    public function test_sale_warn_mode_allows_overdispense_with_audit_log(): void
+    {
+        config()->set('rx.dispense_enforcement', 'warn');
+        $this->seed(RolesAndPermissionSeeder::class);
+        $frontLocation = InventoryLocation::query()->where('code', 'front')->firstOrFail();
+
+        $pharmacist = User::factory()->create();
+        $pharmacist->assignRole('pharmacist');
+        $patient = Patient::create([
+            'name' => 'RX Warn Patient',
+            'birthdate' => '1990-01-01',
+            'contact_info' => '09990002222',
+        ]);
+        $prescriber = \App\Models\Prescriber::create([
+            'name' => 'RX Warn Prescriber',
+            'license_number' => 'RX-WARN-001',
+            'contact_info' => 'rx-warn@example.com',
+        ]);
+        $product = Product::create([
+            'name' => 'RX Warn Product',
+            'generic_name' => 'Azithromycin',
+            'sku' => 'RX-WARN-SKU',
+            'price' => 10,
+            'reorder_level' => 2,
+        ]);
+        $prescription = Prescription::create([
+            'patient_id' => $patient->id,
+            'prescriber_id' => $prescriber->id,
+            'issued_date' => now()->toDateString(),
+            'status' => 'active',
+        ]);
+        $prescription->prescriptionItems()->create([
+            'product_id' => $product->id,
+            'dosage' => 'once a day',
+            'quantity' => 1,
+        ]);
+        InventoryBatch::create([
+            'product_id' => $product->id,
+            'location_id' => $frontLocation->id,
+            'batch_number' => 'RX-WARN-BATCH',
+            'quantity' => 10,
+            'cost_price' => 3,
+            'expiry_date' => now()->addMonths(3)->toDateString(),
+        ]);
+
+        $this->actingAs($pharmacist)->post(route('sales.store'), [
+            'patient_mode' => 'existing',
+            'patient_id' => $patient->id,
+            'prescription_id' => $prescription->id,
+            'payment_method' => 'cash',
+            'product_ids' => [$product->id],
+            'quantities' => [2],
+        ])->assertRedirect();
+
+        $this->assertDatabaseHas('audit_logs', [
+            'action' => 'rx_dispense_warning_override',
+            'auditable_type' => Prescription::class,
+            'auditable_id' => $prescription->id,
         ]);
     }
 }

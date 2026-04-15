@@ -59,11 +59,13 @@ class ProductController extends Controller
 
     public function show(Product $product)
     {
-        $product->load('inventoryBatches');
+        $product->load('inventoryBatches.location');
         $totalStock = $product->inventoryBatches->sum('quantity');
+        $frontStock = (int) $product->inventoryBatches->filter(fn ($batch) => $batch->location?->code === 'front')->sum('quantity');
+        $backStock = (int) $product->inventoryBatches->filter(fn ($batch) => $batch->location?->code === 'back')->sum('quantity');
         $lowStock   = $totalStock <= $product->reorder_level;
 
-        return view('products.show', compact('product', 'totalStock', 'lowStock'));
+        return view('products.show', compact('product', 'totalStock', 'lowStock', 'frontStock', 'backStock'));
     }
 
     public function edit(Product $product)
