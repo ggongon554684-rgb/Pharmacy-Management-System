@@ -23,8 +23,8 @@
                 @if (isset($header))
                     <header class="app-header shadow-sm">
                         <div class="container-fluid py-3 px-4">
-                            <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2">
-                                <div>{{ $header }}</div>
+                            <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2 page-header">
+                                <div class="w-100">{{ $header }}</div>
                                 <small class="text-muted">Welcome back, {{ Auth::user()->name }}</small>
                             </div>
                         </div>

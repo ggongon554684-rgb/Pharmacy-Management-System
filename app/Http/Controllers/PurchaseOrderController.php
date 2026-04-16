@@ -89,6 +89,19 @@ class PurchaseOrderController extends Controller
         return view('purchase-orders.incoming', compact('purchaseOrders'));
     }
 
+    public function refreshIncoming(Request $request)
+    {
+        $purchaseOrders = PurchaseOrder::whereIn('status', ['approved', 'received'])
+            ->latest()
+            ->paginate(15);
+
+        return response()->json([
+            'table' => view('purchase-orders._incoming-table', compact('purchaseOrders'))->render(),
+            'pagination' => view('purchase-orders._incoming-pagination', compact('purchaseOrders'))->render(),
+            'updated_at' => now()->format('M d, Y H:i:s'),
+        ]);
+    }
+
     public function approve(PurchaseOrder $purchaseOrder)
     {
         $purchaseOrder->update([
@@ -102,12 +115,20 @@ class PurchaseOrderController extends Controller
     public function receive(Request $request, PurchaseOrder $purchaseOrder)
     {
         $validated = $request->validate([
+            'receive_date' => 'required|date|before_or_equal:today',
+            'backdate_reason' => 'nullable|string|max:255',
             'batch_number' => 'required|string|max:100',
-            'expiry_date' => 'required|date|after:today',
+            'expiry_date' => 'required|date|after_or_equal:today',
         ]);
 
         if ($purchaseOrder->status !== 'approved') {
             return back()->with('error', 'Only approved PO can be received.');
+        }
+
+        $receiveDate = $validated['receive_date'];
+        $isToday = $receiveDate === now()->format('Y-m-d');
+        if (!$isToday && empty($validated['backdate_reason'])) {
+            return back()->withErrors(['backdate_reason' => 'Reason is required when receiving on a date other than today.'])->withInput();
         }
 
         $purchaseOrder->load('items.product');
@@ -126,7 +147,7 @@ class PurchaseOrderController extends Controller
             }
         }
 
-        DB::transaction(function () use ($purchaseOrder, $validated) {
+        DB::transaction(function () use ($purchaseOrder, $validated, $isToday) {
             foreach ($purchaseOrder->items as $item) {
                 $batch = InventoryBatch::create([
                     'product_id' => $item->product_id,
@@ -145,6 +166,7 @@ class PurchaseOrderController extends Controller
                     'reference_type' => PurchaseOrder::class,
                     'reference_id' => $purchaseOrder->id,
                     'notes' => 'PO received',
+                    'moved_at' => $validated['receive_date'],
                 ]);
             }
 
@@ -158,8 +180,28 @@ class PurchaseOrderController extends Controller
                 'old_values' => null,
                 'new_values' => $purchaseOrder->fresh()->toArray(),
             ]);
+
+            if (!$isToday) {
+                AuditLog::create([
+                    'user_id' => auth()->id(),
+                    'action' => 'po_backdated',
+                    'auditable_id' => $purchaseOrder->id,
+                    'auditable_type' => PurchaseOrder::class,
+                    'old_values' => null,
+                    'new_values' => ['receive_date' => $validated['receive_date'], 'reason' => $validated['backdate_reason']],
+                ]);
+            }
         });
 
         return back()->with('success', 'PO received and stock added.');
+    }
+
+    public function showReceiveForm(PurchaseOrder $purchaseOrder)
+    {
+        if ($purchaseOrder->status !== 'approved') {
+            return redirect()->route('purchase-orders.show', $purchaseOrder)->with('error', 'Only approved PO can be received.');
+        }
+
+        return view('purchase-orders.receive', compact('purchaseOrder'));
     }
 }

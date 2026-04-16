@@ -8,33 +8,46 @@
             </div>
             <div class="card module-surface">
                 <div class="card-body">
-                    <table class="table table-hover align-middle mb-0 module-table">
-                        <thead>
-                            <tr>
-                                <th>PO #</th>
-                                <th>Status</th>
-                                <th>Expected Date</th>
-                                <th>Action</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @forelse($purchaseOrders as $po)
-                                <tr>
-                                    <td>{{ $po->po_number }}</td>
-                                    <td>
-                                        <span class="status-badge {{ $po->status === 'received' ? 'status-received' : 'status-pending' }}">{{ ucfirst($po->status) }}</span>
-                                    </td>
-                                    <td>{{ $po->expected_date?->format('M d, Y') ?? '-' }}</td>
-                                    <td><a href="{{ route('purchase-orders.show', $po) }}" class="btn btn-sm btn-outline-primary">Open</a></td>
-                                </tr>
-                            @empty
-                                <tr><td colspan="4" class="text-center text-muted">No incoming deliveries.</td></tr>
-                            @endforelse
-                        </tbody>
-                    </table>
+                    <div id="incoming-refresh-status" class="mb-2 text-muted small">Last updated: {{ now()->format('M d, Y H:i:s') }}</div>
+                    <div id="incoming-table-container">
+                        @include('purchase-orders._incoming-table', ['purchaseOrders' => $purchaseOrders])
+                    </div>
                 </div>
             </div>
-            <div class="mt-3">{{ $purchaseOrders->links() }}</div>
+            <div id="incoming-pagination">
+                @include('purchase-orders._incoming-pagination', ['purchaseOrders' => $purchaseOrders])
+            </div>
         </div>
     </div>
+    <script>
+        (function () {
+            const refreshStatus = document.getElementById('incoming-refresh-status');
+            const tableContainer = document.getElementById('incoming-table-container');
+            const paginationContainer = document.getElementById('incoming-pagination');
+            const refreshUri = "{{ route('purchase-orders.incoming.refresh') }}";
+
+            async function refreshIncoming() {
+                try {
+                    const url = refreshUri + window.location.search;
+                    const response = await fetch(url, { headers: { Accept: 'application/json' } });
+                    if (!response.ok) {
+                        return;
+                    }
+                    const payload = await response.json();
+                    tableContainer.innerHTML = payload.table;
+                    paginationContainer.innerHTML = payload.pagination;
+                    refreshStatus.textContent = 'Last updated: ' + payload.updated_at;
+                } catch (error) {
+                    console.error('Incoming deliveries refresh failed:', error);
+                }
+            }
+
+            setInterval(refreshIncoming, 10000);
+            document.addEventListener('visibilitychange', () => {
+                if (!document.hidden) {
+                    refreshIncoming();
+                }
+            });
+        })();
+    </script>
 </x-app-layout>

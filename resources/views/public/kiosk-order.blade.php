@@ -85,6 +85,7 @@
                 <div class="row g-3" id="kiosk-medicine-cards">
                     @foreach($products as $medicine)
                         @php $stock = (int) ($medicine->sellable_stock ?? 0); @endphp
+                        @if($stock > 0)
                         <div class="col-md-6 col-xl-4 medicine-col">
                             <div class="kiosk-card p-3 h-100 d-flex flex-column" data-name="{{ strtolower($medicine->name) }}" data-generic="{{ strtolower($medicine->generic_name ?? '') }}">
                                 <div class="d-flex justify-content-between align-items-start mb-1">
@@ -113,6 +114,7 @@
                                 >Add</button>
                             </div>
                         </div>
+                        @endif
                     @endforeach
                 </div>
             </div>

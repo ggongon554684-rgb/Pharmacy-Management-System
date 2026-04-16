@@ -18,6 +18,11 @@ class StockMovement extends Model
         'reference_type',
         'reference_id',
         'notes',
+        'moved_at',
+    ];
+
+    protected $casts = [
+        'moved_at' => 'date',
     ];
 
     public function product()

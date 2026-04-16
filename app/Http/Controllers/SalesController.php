@@ -26,6 +26,17 @@ class SalesController extends Controller
         return view('sales.index', compact('sales'));
     }
 
+    public function refresh(Request $request)
+    {
+        $sales = Sale::with(['patient', 'user'])->latest()->paginate(20);
+
+        return response()->json([
+            'table' => view('sales._table', compact('sales'))->render(),
+            'pagination' => view('sales._pagination', compact('sales'))->render(),
+            'updated_at' => now()->format('M d, Y H:i:s'),
+        ]);
+    }
+
     public function create()
     {
         $patients = Patient::orderBy('name')->get();
@@ -41,7 +52,7 @@ class SalesController extends Controller
             ], 'quantity')
             ->orderBy('name')
             ->get();
-        $prescriptions = Prescription::with(['patient', 'prescriber'])
+        $prescriptions = Prescription::with(['patient', 'prescriber', 'prescriptionItems'])
             ->where('status', 'active')
             ->orderByDesc('issued_date')
             ->get();
@@ -60,6 +71,11 @@ class SalesController extends Controller
             'patient_allergies' => 'nullable|string',
             'prescription_id' => 'nullable|exists:prescriptions,id',
             'payment_method' => 'required|in:cash,card,insurance',
+            'payment_tendered' => 'nullable|numeric|min:0',
+            'payment_reference' => 'nullable|string|max:255',
+            'insurance_provider' => 'nullable|string|max:255',
+            'insurance_policy_number' => 'nullable|string|max:255',
+            'insurance_authorization_code' => 'nullable|string|max:255',
             'product_ids' => 'required|array|min:1',
             'product_ids.*' => 'required|exists:products,id',
             'quantities' => 'required|array|min:1',
@@ -118,6 +134,39 @@ class SalesController extends Controller
 
                 if (empty($lineEntries)) {
                     return back()->withErrors(['product_ids' => 'Please add at least one valid medicine line.'])->withInput();
+                }
+
+                $paymentTendered = (float) ($validated['payment_tendered'] ?? 0);
+                $paymentChangeDue = 0;
+                $paymentReference = $validated['payment_reference'] ?? null;
+                $insuranceProvider = $validated['insurance_provider'] ?? null;
+                $insurancePolicyNumber = $validated['insurance_policy_number'] ?? null;
+                $insuranceAuthorizationCode = $validated['insurance_authorization_code'] ?? null;
+
+                if ($validated['payment_method'] === 'cash') {
+                    if ($paymentTendered < $totalAmount) {
+                        return back()->withErrors(['payment_tendered' => 'Cash received must be equal to or greater than the total amount.'])->withInput();
+                    }
+                    $paymentChangeDue = round($paymentTendered - $totalAmount, 2);
+                }
+
+                if ($validated['payment_method'] === 'card') {
+                    if (empty($paymentReference)) {
+                        return back()->withErrors(['payment_reference' => 'Card transaction reference is required for credit payments.'])->withInput();
+                    }
+                    if ($paymentTendered <= 0) {
+                        $paymentTendered = $totalAmount;
+                    }
+                    if ($paymentTendered < $totalAmount) {
+                        return back()->withErrors(['payment_tendered' => 'Card payment must cover the total amount.'])->withInput();
+                    }
+                }
+
+                if ($validated['payment_method'] === 'insurance') {
+                    if (empty($insuranceProvider) || empty($insurancePolicyNumber)) {
+                        return back()->withErrors(['insurance_provider' => 'Insurance provider and policy number are required for insurance payments.'])->withInput();
+                    }
+                    $paymentTendered = 0;
                 }
 
                 $patientId = $validated['patient_id'] ?? null;
@@ -185,6 +234,12 @@ class SalesController extends Controller
                     'prescription_id' => $validated['prescription_id'] ?? null,
                     'total_amount' => $totalAmount,
                     'payment_method' => $validated['payment_method'],
+                    'payment_tendered' => $paymentTendered,
+                    'payment_change_due' => $paymentChangeDue,
+                    'payment_reference' => $paymentReference,
+                    'insurance_provider' => $insuranceProvider,
+                    'insurance_policy_number' => $insurancePolicyNumber,
+                    'insurance_authorization_code' => $insuranceAuthorizationCode,
                 ]);
 
                 foreach ($lineEntries as $entry) {

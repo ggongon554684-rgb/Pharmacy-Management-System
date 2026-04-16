@@ -52,7 +52,7 @@ Focus areas: inventory flow, patient records, purchase orders, stock movements, 
 ```bash
 composer install
 npm install
-```
+``` 
 
 2. Configure environment
 ```bash

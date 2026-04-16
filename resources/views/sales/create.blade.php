@@ -25,9 +25,6 @@
                                 </select>
                             </div>
                             <div class="col-md-9" id="existing_patient_wrap">
-                                <div class="mb-2">
-                                    <input type="text" id="patient-search" class="form-control form-control-sm" placeholder="Quick search patient name...">
-                                </div>
                                 <select class="form-select" name="patient_id">
                                     <option value="">Select patient</option>
                                     @foreach($patients as $patient)
@@ -59,10 +56,10 @@
                         <div class="row mb-3">
                             <div class="col-md-12">
                                 <label class="form-label">Prescription (Optional)</label>
-                                <select class="form-select" name="prescription_id">
+                                <select class="form-select" name="prescription_id" id="prescription_id">
                                     <option value="">No prescription</option>
                                     @foreach($prescriptions as $prescription)
-                                        <option value="{{ $prescription->id }}" {{ (string) old('prescription_id') === (string) $prescription->id ? 'selected' : '' }}>
+                                        <option value="{{ $prescription->id }}" data-patient-id="{{ $prescription->patient_id }}" {{ (string) old('prescription_id') === (string) $prescription->id ? 'selected' : '' }}>
                                             RX #{{ $prescription->id }} - {{ $prescription->patient->name ?? 'Unknown Patient' }} - {{ $prescription->prescriber->name ?? 'Unknown Prescriber' }}
                                         </option>
                                     @endforeach
@@ -87,6 +84,7 @@
                                             $frontStock = (int) ($product->front_stock ?? 0);
                                             $backStock = (int) ($product->back_stock ?? 0);
                                         @endphp
+                                        @if($stock > 0)
                                         <div class="col-md-6 col-xl-4">
                                             <div class="card pos-card h-100 border {{ $stock <= 0 ? 'border-danger-subtle bg-light' : 'border-primary-subtle' }}" data-name="{{ strtolower($product->name) }}" data-generic="{{ strtolower($product->generic_name ?? '') }}">
                                                 <div class="card-body d-flex flex-column">
@@ -124,6 +122,7 @@
                                                 </div>
                                             </div>
                                         </div>
+                                        @endif
                                     @endforeach
                                 </div>
                             </div>
@@ -147,22 +146,54 @@
                                             <strong>Total</strong>
                                             <strong id="cart-total">P0.00</strong>
                                         </div>
+                                        <div class="mt-3">
+                                            <div class="mb-3">
+                                                <label class="form-label">Payment Method</label>
+                                                <select class="form-select" name="payment_method" id="payment_method" required>
+                                                    <option value="cash" {{ old('payment_method') === 'cash' ? 'selected' : '' }}>Cash</option>
+                                                    <option value="card" {{ old('payment_method') === 'card' ? 'selected' : '' }}>Card</option>
+                                                    <option value="insurance" {{ old('payment_method') === 'insurance' ? 'selected' : '' }}>Insurance</option>
+                                                </select>
+                                            </div>
+                                            <div id="payment_cash_fields" class="row g-3 mb-3" style="display: none;">
+                                                <div class="col-12">
+                                                    <label class="form-label">Cash Received</label>
+                                                    <input type="number" step="0.01" min="0" class="form-control" name="payment_tendered" id="payment_tendered" value="{{ old('payment_tendered', '') }}" placeholder="Amount customer gives">
+                                                    <small class="text-muted">Enter cash after selecting medicines; change due updates live.</small>
+                                                </div>
+                                                <div class="col-12">
+                                                    <label class="form-label">Change Due</label>
+                                                    <div class="form-control-plaintext fw-semibold" id="payment_change_due_display">P0.00</div>
+                                                    <input type="hidden" name="payment_change_due" id="payment_change_due" value="{{ old('payment_change_due', 0) }}">
+                                                </div>
+                                            </div>
+                                            <div id="payment_card_fields" class="row mb-3" style="display: none;">
+                                                <div class="col-12">
+                                                    <label class="form-label">Card Transaction Reference</label>
+                                                    <input type="text" name="payment_reference" value="{{ old('payment_reference') }}" class="form-control" placeholder="Authorization code or reference">
+                                                    <small class="text-muted">Required for credit/card payments.</small>
+                                                </div>
+                                            </div>
+                                            <div id="payment_insurance_fields" class="row mb-3" style="display: none;">
+                                                <div class="col-12 mb-3">
+                                                    <label class="form-label">Insurance Provider</label>
+                                                    <input type="text" name="insurance_provider" value="{{ old('insurance_provider') }}" class="form-control" placeholder="Provider name">
+                                                </div>
+                                                <div class="col-12 mb-3">
+                                                    <label class="form-label">Policy / Member Number</label>
+                                                    <input type="text" name="insurance_policy_number" value="{{ old('insurance_policy_number') }}" class="form-control" placeholder="Policy or member number">
+                                                </div>
+                                                <div class="col-12">
+                                                    <label class="form-label">Authorization Code</label>
+                                                    <input type="text" name="insurance_authorization_code" value="{{ old('insurance_authorization_code') }}" class="form-control" placeholder="Optional authorization code">
+                                                </div>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
                         </div>
                         <div id="sale-lines-hidden"></div>
-
-                        <div class="row">
-                            <div class="col-md-4 mb-3">
-                                <label class="form-label">Payment Method</label>
-                                <select class="form-select" name="payment_method" required>
-                                    <option value="cash">Cash</option>
-                                    <option value="card">Card</option>
-                                    <option value="insurance">Insurance</option>
-                                </select>
-                            </div>
-                        </div>
 
                         <button type="submit" class="btn btn-primary">Complete Release</button>
                         <a href="{{ route('sales.index') }}" class="btn btn-outline-secondary">Cancel</a>
@@ -171,6 +202,25 @@
             </div>
         </div>
     </div>
+
+    @php
+        $prescriptionItemsMap = [];
+        $prescriptionPatientMap = [];
+        foreach ($prescriptions as $prescription) {
+            $productEntries = [];
+            foreach ($prescription->prescriptionItems as $item) {
+                $productEntries[] = [
+                    'product_id' => $item->product_id,
+                    'quantity' => $item->quantity,
+                ];
+            }
+            $prescriptionItemsMap[(string) $prescription->id] = $productEntries;
+            $prescriptionPatientMap[(string) $prescription->id] = $prescription->patient_id;
+        }
+    @endphp
+
+    <script type="application/json" id="prescription-items-data">{!! json_encode($prescriptionItemsMap) !!}</script>
+    <script type="application/json" id="prescription-patients-data">{!! json_encode($prescriptionPatientMap) !!}</script>
 
     <script>
         (function () {
@@ -184,12 +234,25 @@
             const cartEmpty = document.getElementById('cart-empty');
             const cartTableWrap = document.getElementById('cart-table-wrap');
             const cartTotal = document.getElementById('cart-total');
-            const patientSearch = document.getElementById('patient-search');
             const patientSelect = document.querySelector('select[name="patient_id"]');
+            const prescriptionSelect = document.getElementById('prescription_id');
+            const prescriptionItemsMap = JSON.parse(document.getElementById('prescription-items-data').textContent || '{}');
+            const prescriptionPatientMap = JSON.parse(document.getElementById('prescription-patients-data').textContent || '{}');
             const medicineSearch = document.getElementById('medicine-search');
             const focusMedicineSearch = document.getElementById('focus-medicine-search');
+            const paymentMethod = document.getElementById('payment_method');
+            const cashPaymentFields = document.getElementById('payment_cash_fields');
+            const cardPaymentFields = document.getElementById('payment_card_fields');
+            const insurancePaymentFields = document.getElementById('payment_insurance_fields');
+            const paymentTenderedInput = document.getElementById('payment_tendered');
+            const paymentChangeDueInput = document.getElementById('payment_change_due');
+            const paymentChangeDueDisplay = document.getElementById('payment_change_due_display');
             const form = document.querySelector('form');
             const cart = new Map();
+
+            function parseCurrency(value) {
+                return Number(String(value).replace(/[^\d.-]/g, '')) || 0;
+            }
 
             function togglePatientMode() {
                 if (mode.value === 'new') {
@@ -203,6 +266,79 @@
 
             mode.addEventListener('change', togglePatientMode);
             togglePatientMode();
+
+            function updatePrescriptionOptions() {
+                const selectedPatientId = patientSelect.value;
+                for (const option of prescriptionSelect.options) {
+                    if (!option.value) {
+                        option.hidden = false;
+                        continue;
+                    }
+                    const optionPatientId = option.getAttribute('data-patient-id');
+                    option.hidden = selectedPatientId && optionPatientId !== selectedPatientId;
+                }
+                // Reset prescription if current selection is no longer visible
+                if (prescriptionSelect.options[prescriptionSelect.selectedIndex].hidden) {
+                    prescriptionSelect.value = '';
+                }
+            }
+
+            patientSelect.addEventListener('change', updatePrescriptionOptions);
+            prescriptionSelect.addEventListener('change', function () {
+                addPrescriptionItems(prescriptionSelect.value);
+            });
+            updatePrescriptionOptions();
+            if (prescriptionSelect.value) {
+                addPrescriptionItems(prescriptionSelect.value);
+            }
+
+            function addPrescriptionItems(prescriptionId) {
+                if (!prescriptionId) {
+                    return;
+                }
+
+                const items = prescriptionItemsMap[prescriptionId] || [];
+                const patientId = prescriptionPatientMap[prescriptionId] || null;
+
+                if (patientId) {
+                    mode.value = 'existing';
+                    togglePatientMode();
+                    patientSelect.value = patientId;
+                    updatePrescriptionOptions();
+                }
+
+                cart.clear();
+                const missingProducts = [];
+
+                items.forEach((item) => {
+                    const button = document.querySelector(`button[data-product-id="${item.product_id}"]`);
+                    if (!button) {
+                        missingProducts.push(item.product_id);
+                        return;
+                    }
+
+                    const stock = Number(button.dataset.productStock || 0);
+                    const quantity = Math.min(Number(item.quantity || 0), stock);
+                    if (stock <= 0 || quantity <= 0) {
+                        missingProducts.push(item.product_id);
+                        return;
+                    }
+
+                    cart.set(String(item.product_id), {
+                        id: String(item.product_id),
+                        name: button.dataset.productName,
+                        price: Number(button.dataset.productPrice),
+                        stock,
+                        quantity,
+                    });
+                });
+
+                renderCart();
+
+                if (missingProducts.length > 0) {
+                    window.alert('Some prescription medicines could not be added because they are unavailable or out of stock.');
+                }
+            }
 
             function formatCurrency(value) { return 'P' + Number(value).toFixed(2); }
 
@@ -253,6 +389,7 @@
                 cartEmpty.classList.toggle('d-none', hasItems);
                 cartTableWrap.classList.toggle('d-none', !hasItems);
                 syncHiddenInputs();
+                updateCashChange();
             }
 
             function addToCart(product) {
@@ -354,24 +491,72 @@
                 });
             }
 
-            if (patientSearch && patientSelect) {
-                patientSearch.addEventListener('input', function () {
-                    const query = patientSearch.value.trim().toLowerCase();
-                    for (const option of patientSelect.options) {
-                        if (!option.value) continue;
-                        option.hidden = query.length > 0 && !option.text.toLowerCase().includes(query);
-                    }
-                });
-            }
-
             if (focusMedicineSearch && medicineSearch) {
                 focusMedicineSearch.addEventListener('click', function () { medicineSearch.focus(); });
             }
+
+            function togglePaymentFields() {
+                const method = paymentMethod?.value;
+                if (!method) {
+                    return;
+                }
+                cashPaymentFields.style.display = method === 'cash' ? '' : 'none';
+                cardPaymentFields.style.display = method === 'card' ? '' : 'none';
+                insurancePaymentFields.style.display = method === 'insurance' ? '' : 'none';
+                updateCashChange();
+            }
+
+            function updateCashChange() {
+                const total = parseCurrency(cartTotal.textContent);
+                const tendered = parseCurrency(paymentTenderedInput?.value);
+                const changeDue = Math.max(0, tendered - total);
+                if (paymentChangeDueDisplay) {
+                    paymentChangeDueDisplay.textContent = `P${changeDue.toFixed(2)}`;
+                }
+                if (paymentChangeDueInput) {
+                    paymentChangeDueInput.value = changeDue.toFixed(2);
+                }
+            }
+
+            paymentMethod?.addEventListener('change', togglePaymentFields);
+            paymentTenderedInput?.addEventListener('input', updateCashChange);
+            togglePaymentFields();
 
             form.addEventListener('submit', function (event) {
                 if (cart.size === 0) {
                     event.preventDefault();
                     window.alert('Please add at least one medicine to the cart.');
+                    return;
+                }
+
+                const total = parseCurrency(cartTotal.textContent);
+                const method = paymentMethod?.value;
+                if (method === 'cash') {
+                    const tendered = parseCurrency(paymentTenderedInput?.value);
+                    if (tendered < total) {
+                        event.preventDefault();
+                        window.alert('Cash received must cover the total amount due.');
+                        return;
+                    }
+                }
+
+                if (method === 'card') {
+                    const reference = document.querySelector('input[name="payment_reference"]').value.trim();
+                    if (!reference) {
+                        event.preventDefault();
+                        window.alert('Card transaction reference is required for credit payments.');
+                        return;
+                    }
+                }
+
+                if (method === 'insurance') {
+                    const provider = document.querySelector('input[name="insurance_provider"]').value.trim();
+                    const policy = document.querySelector('input[name="insurance_policy_number"]').value.trim();
+                    if (!provider || !policy) {
+                        event.preventDefault();
+                        window.alert('Insurance provider and policy number are required for insurance payments.');
+                        return;
+                    }
                 }
             });
 

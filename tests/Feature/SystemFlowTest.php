@@ -104,6 +104,7 @@ class SystemFlowTest extends TestCase
             'patient_mode' => 'existing',
             'patient_id' => $patient->id,
             'payment_method' => 'cash',
+            'payment_tendered' => 9999.99,
             'product_ids' => [$product->id],
             'quantities' => [2],
         ])->assertRedirect();
@@ -255,6 +256,7 @@ class SystemFlowTest extends TestCase
             'patient_id' => $patient->id,
             'prescription_id' => $prescription->id,
             'payment_method' => 'cash',
+            'payment_tendered' => 9999.99,
             'product_ids' => [$product->id],
             'quantities' => [1],
         ])->assertRedirect();
@@ -320,6 +322,7 @@ class SystemFlowTest extends TestCase
             'patient_mode' => 'existing',
             'patient_id' => $patient->id,
             'payment_method' => 'cash',
+            'payment_tendered' => 9999.99,
             'product_ids' => [$product->id, $product->id],
             'quantities' => [1, 2],
         ])->assertRedirect();
@@ -443,6 +446,7 @@ class SystemFlowTest extends TestCase
                 'patient_mode' => 'existing',
                 'patient_id' => $patient->id,
                 'payment_method' => 'cash',
+                'payment_tendered' => 9999.99,
                 'product_ids' => [$product->id],
                 'quantities' => [1],
             ])
@@ -674,6 +678,7 @@ class SystemFlowTest extends TestCase
                 'patient_id' => $patient->id,
                 'prescription_id' => $prescription->id,
                 'payment_method' => 'cash',
+                'payment_tendered' => 9999.99,
                 'product_ids' => [$product->id],
                 'quantities' => [2],
             ])
@@ -731,6 +736,7 @@ class SystemFlowTest extends TestCase
             'patient_id' => $patient->id,
             'prescription_id' => $prescription->id,
             'payment_method' => 'cash',
+            'payment_tendered' => 9999.99,
             'product_ids' => [$product->id],
             'quantities' => [2],
         ])->assertRedirect();

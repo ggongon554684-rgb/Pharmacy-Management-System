@@ -1,9 +1,11 @@
 <x-app-layout>
     <x-slot name="header">
-        <div class="d-flex justify-content-between align-items-center">
-            <h2 class="h4 mb-0">POS / Sales</h2>
+        <div class="d-flex justify-content-between align-items-center page-header">
+            <h2 class="h4 mb-0 page-title">POS / Sales</h2>
             @can('create sales')
-                <a href="{{ route('sales.create') }}" class="btn btn-primary btn-sm">Release Medicine</a>
+                <div class="page-actions">
+                    <a href="{{ route('sales.create') }}" class="btn btn-primary btn-sm">Release Medicine</a>
+                </div>
             @endcan
         </div>
     </x-slot>
@@ -12,30 +14,46 @@
             @if(session('success'))<div class="alert alert-success">{{ session('success') }}</div>@endif
             <div class="card ui-surface">
                 <div class="card-body">
-                    <div class="table-responsive">
-                        <table class="table table-striped align-middle mb-0">
-                            <thead class="table-dark">
-                                <tr><th>Date</th><th>Patient</th><th>Cashier</th><th>Total</th><th>Payment</th><th>Action</th></tr>
-                            </thead>
-                            <tbody>
-                                @forelse($sales as $sale)
-                                    <tr>
-                                        <td>{{ $sale->created_at->format('M d, Y H:i') }}</td>
-                                        <td>{{ $sale->patient->name ?? 'Walk-in' }}</td>
-                                        <td>{{ $sale->user->name ?? '-' }}</td>
-                                        <td>{{ number_format($sale->total_amount, 2) }}</td>
-                                        <td>{{ ucfirst($sale->payment_method) }}</td>
-                                        <td><a href="{{ route('sales.show', $sale) }}" class="btn btn-sm btn-info">View</a></td>
-                                    </tr>
-                                @empty
-                                    <tr><td colspan="6" class="text-center text-muted">No sales yet.</td></tr>
-                                @endforelse
-                            </tbody>
-                        </table>
+                    <div id="sales-refresh-status" class="mb-2 text-muted small">Last updated: {{ now()->format('M d, Y H:i:s') }}</div>
+                    <div id="sales-table-container">
+                        @include('sales._table', ['sales' => $sales])
                     </div>
                 </div>
             </div>
-            <div class="mt-3">{{ $sales->links() }}</div>
+            <div id="sales-pagination">
+                @include('sales._pagination', ['sales' => $sales])
+            </div>
         </div>
     </div>
+    <script>
+        (function () {
+            const refreshStatus = document.getElementById('sales-refresh-status');
+            const tableContainer = document.getElementById('sales-table-container');
+            const paginationContainer = document.getElementById('sales-pagination');
+            const refreshUri = "{{ route('sales.refresh') }}";
+
+            async function refreshSales() {
+                try {
+                    const url = refreshUri + window.location.search;
+                    const response = await fetch(url, { headers: { Accept: 'application/json' } });
+                    if (!response.ok) {
+                        return;
+                    }
+                    const payload = await response.json();
+                    tableContainer.innerHTML = payload.table;
+                    paginationContainer.innerHTML = payload.pagination;
+                    refreshStatus.textContent = 'Last updated: ' + payload.updated_at;
+                } catch (error) {
+                    console.error('Sales refresh failed:', error);
+                }
+            }
+
+            setInterval(refreshSales, 10000);
+            document.addEventListener('visibilitychange', () => {
+                if (!document.hidden) {
+                    refreshSales();
+                }
+            });
+        })();
+    </script>
 </x-app-layout>

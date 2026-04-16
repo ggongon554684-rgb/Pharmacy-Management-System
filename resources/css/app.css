@@ -56,3 +56,97 @@
     color: var(--text-main);
     font-weight: 700;
 }
+
+.page-header {
+    width: 100%;
+}
+
+.page-header > .w-100 {
+    min-width: 0;
+}
+
+.page-header .page-actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+}
+
+.page-header .page-title {
+    margin-bottom: 0;
+}
+
+@media print {
+    body,
+    .app-shell,
+    .app-main,
+    .container-fluid {
+        background: #ffffff !important;
+        color: #000000 !important;
+    }
+
+    .app-header,
+    .app-footer,
+    .side-nav-menu,
+    .navbar,
+    .btn,
+    .alert,
+    .no-print,
+    .breadcrumb,
+    .breadcrumb-item,
+    .badge,
+    .page-link,
+    .pagination {
+        display: none !important;
+    }
+
+    .app-main {
+        display: block !important;
+        margin-left: 0 !important;
+    }
+
+    .receipt-printable {
+        width: 100% !important;
+        margin: 0;
+        padding: 0;
+    }
+
+    .receipt-printable .card {
+        border: 1px solid #000 !important;
+        box-shadow: none !important;
+    }
+
+    .receipt-printable .card-header,
+    .receipt-printable .card-body {
+        border: none !important;
+        background: transparent !important;
+    }
+
+    .receipt-printable .receipt-table {
+        width: 100% !important;
+        border-collapse: collapse !important;
+        margin-bottom: 0 !important;
+    }
+
+    .receipt-printable .receipt-table th,
+    .receipt-printable .receipt-table td {
+        border: 1px solid #000 !important;
+        padding: 0.5rem !important;
+    }
+
+    .receipt-printable .receipt-table thead th {
+        background: #f4f4f4 !important;
+        color: #000 !important;
+    }
+
+    .receipt-printable .row > [class*="col-"] {
+        display: block !important;
+        width: 100% !important;
+        margin-bottom: 0.5rem !important;
+    }
+
+    .receipt-printable .row {
+        display: block !important;
+    }
+}

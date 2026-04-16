@@ -1,8 +1,10 @@
 <x-app-layout>
     <x-slot name="header">
-        <div class="d-flex justify-content-between align-items-center">
-            <h2 class="h4 mb-0">Patients</h2>
-            <a href="{{ route('patients.create') }}" class="btn btn-primary btn-sm">Add Patient</a>
+        <div class="d-flex justify-content-between align-items-center page-header">
+            <h2 class="h4 mb-0 page-title">Patients</h2>
+            <div class="page-actions">
+                <a href="{{ route('patients.create') }}" class="btn btn-primary btn-sm">Add Patient</a>
+            </div>
         </div>
     </x-slot>
     <div class="py-4">

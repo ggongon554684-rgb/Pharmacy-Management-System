@@ -90,12 +90,18 @@ Route::middleware('auth')->group(function () {
     Route::get('incoming-deliveries', [PurchaseOrderController::class, 'incomingDeliveries'])
         ->middleware('can:view incoming deliveries')
         ->name('purchase-orders.incoming');
+    Route::get('incoming-deliveries/refresh', [PurchaseOrderController::class, 'refreshIncoming'])
+        ->middleware('can:view incoming deliveries')
+        ->name('purchase-orders.incoming.refresh');
     Route::post('purchase-orders/{purchaseOrder}/approve', [PurchaseOrderController::class, 'approve'])
         ->middleware('can:approve purchase orders')
         ->name('purchase-orders.approve');
-    Route::post('purchase-orders/{purchaseOrder}/receive', [PurchaseOrderController::class, 'receive'])
+    Route::get('purchase-orders/{purchaseOrder}/receive', [PurchaseOrderController::class, 'showReceiveForm'])
         ->middleware('can:edit inventory')
         ->name('purchase-orders.receive');
+    Route::post('purchase-orders/{purchaseOrder}/receive', [PurchaseOrderController::class, 'receive'])
+        ->middleware('can:edit inventory')
+        ->name('purchase-orders.receive.post');
 
     Route::resource('stock-requests', StockRequestController::class)
         ->only(['index', 'create', 'store'])
@@ -123,6 +129,9 @@ Route::middleware('auth')->group(function () {
     Route::get('sales', [SalesController::class, 'index'])
         ->middleware('can:view sales')
         ->name('sales.index');
+    Route::get('sales/refresh', [SalesController::class, 'refresh'])
+        ->middleware('can:view sales')
+        ->name('sales.refresh');
     Route::get('sales/create', [SalesController::class, 'create'])
         ->middleware('can:create sales')
         ->name('sales.create');
