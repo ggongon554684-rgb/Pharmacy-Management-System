@@ -5,10 +5,11 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class InventoryBatch extends Model
 {
-    use HasFactory;
+    use HasFactory, SoftDeletes;
     protected $fillable = ['product_id', 'location_id', 'batch_number', 'quantity', 'cost_price', 'expiry_date'];
 
     // Relationship: A batch belongs to one specific product
@@ -46,8 +47,8 @@ class InventoryBatch extends Model
 
     public function scopeForLocationCode(Builder $query, string $code): Builder
     {
-        return $query->whereHas('location', function (Builder $locationQuery) use ($code) {
-            $locationQuery->where('code', $code);
-        });
+        return $query->whereIn('location_id', 
+            \App\Models\InventoryLocation::where('code', $code)->select('id')
+        );
     }
 }               

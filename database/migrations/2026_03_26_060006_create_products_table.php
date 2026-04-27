@@ -8,22 +8,27 @@ return new class extends Migration
 {
     /**
      * Run the migrations.
+     *
+     * Changes from original:
+     *  - Added softDeletes() — Product model uses SoftDeletes trait but the column was missing,
+     *    meaning any soft-delete call would throw a DB error.
      */
     public function up(): void
     {
         Schema::create('products', function (Blueprint $table) {
             $table->id();
 
-            //product details
+            // Product details
             $table->string('name');
             $table->string('generic_name')->nullable();
             $table->string('sku')->unique();
 
-            //finnancial details
+            // Financial details
             $table->decimal('price', 10, 2);
             $table->integer('reorder_level')->default(0);
-            
+
             $table->timestamps();
+            $table->softDeletes(); // Required: Product model uses SoftDeletes
         });
     }
 

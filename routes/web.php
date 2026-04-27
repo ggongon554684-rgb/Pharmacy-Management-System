@@ -5,6 +5,7 @@ use App\Http\Controllers\AuditLogController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\InventoryBatchController;
 use App\Http\Controllers\AdminStockOverrideController;
+use App\Http\Controllers\Admin\TrashController;
 use App\Http\Controllers\PatientController;
 use App\Http\Controllers\PurchaseOrderController;
 use App\Http\Controllers\ReportController;
@@ -158,7 +159,7 @@ Route::middleware('auth')->group(function () {
     Route::patch('prescriptions/{prescription}', [PrescriptionController::class, 'update'])->middleware('can:edit prescriptions')->name('prescriptions.update');
     Route::delete('prescriptions/{prescription}', [PrescriptionController::class, 'destroy'])->middleware('can:delete prescriptions')->name('prescriptions.destroy');
 
-    Route::get('pre-orders/{preOrder}/scan', [PreOrderController::class, 'scanAndCreateSale'])
+    Route::get('pre-orders/{preOrder}/scan', [PreOrderController::class, 'scanAndPrefill'])
         ->middleware(['signed', 'can:create sales'])
         ->name('pre-orders.scan');
 
@@ -173,4 +174,11 @@ Route::middleware('auth')->group(function () {
     Route::resource('audit-logs', AuditLogController::class)
         ->only(['index', 'show'])
         ->middleware('can:view audit logs');
+
+    Route::prefix('admin/trash')->middleware('can:manage system')->group(function () {
+        Route::get('/', [TrashController::class, 'index'])->name('admin.trash.index');
+        Route::get('{type}', [TrashController::class, 'show'])->name('admin.trash.show');
+        Route::post('{type}/{id}/restore', [TrashController::class, 'restore'])->name('admin.trash.restore');
+        Route::delete('{type}/{id}', [TrashController::class, 'forceDelete'])->name('admin.trash.force-delete');
+    });
 });

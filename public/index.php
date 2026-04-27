@@ -1,5 +1,19 @@
 <?php
 
+ini_set('max_execution_time', 120);
+
+// Add this temporary tracer
+register_shutdown_function(function () {
+    $error = error_get_last();
+    if ($error && $error['type'] === E_ERROR) {
+        file_put_contents(
+            storage_path('logs/shutdown.log'),
+            date('Y-m-d H:i:s') . ' | ' . $error['message'] . ' in ' . $error['file'] . ':' . $error['line'] . PHP_EOL,
+            FILE_APPEND
+        );
+    }
+});
+
 use Illuminate\Contracts\Http\Kernel;
 use Illuminate\Http\Request;
 

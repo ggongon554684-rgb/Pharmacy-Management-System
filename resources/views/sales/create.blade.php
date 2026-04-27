@@ -2,11 +2,41 @@
     <x-slot name="header"><h2 class="h4 mb-0">Release Medicine (POS)</h2></x-slot>
     <div class="py-4">
         <div class="container-fluid">
+
+            {{-- ── Pre-order info banner ── --}}
+            @if(session('info'))
+                <div class="alert alert-info alert-dismissible fade show mb-3" role="alert">
+                    <strong>Pre-order loaded:</strong> {{ session('info') }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            @endif
+
+            @if(isset($preOrder))
+                <div class="alert alert-primary d-flex align-items-center gap-2 mb-3" role="alert">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" viewBox="0 0 16 16">
+                        <path d="M1.5 1a.5.5 0 0 0-.5.5v3a.5.5 0 0 1-1 0v-3A1.5 1.5 0 0 1 1.5 0h3a.5.5 0 0 1 0 1h-3zM11 .5a.5.5 0 0 1 .5-.5h3A1.5 1.5 0 0 1 16 1.5v3a.5.5 0 0 1-1 0v-3a.5.5 0 0 0-.5-.5h-3a.5.5 0 0 1-.5-.5zM.5 11a.5.5 0 0 1 .5.5v3a.5.5 0 0 0 .5.5h3a.5.5 0 0 1 0 1h-3A1.5 1.5 0 0 1 0 14.5v-3a.5.5 0 0 1 .5-.5zm15 0a.5.5 0 0 1 .5.5v3a1.5 1.5 0 0 1-1.5 1.5h-3a.5.5 0 0 1 0-1h3a.5.5 0 0 0 .5-.5v-3a.5.5 0 0 1 .5-.5z"/>
+                        <path d="M3 5.5a.5.5 0 0 1 .5-.5h9a.5.5 0 0 1 0 1h-9a.5.5 0 0 1-.5-.5zM3 8a.5.5 0 0 1 .5-.5h9a.5.5 0 0 1 0 1h-9A.5.5 0 0 1 3 8zm0 2.5a.5.5 0 0 1 .5-.5h6a.5.5 0 0 1 0 1h-6a.5.5 0 0 1-.5-.5z"/>
+                    </svg>
+                    <span>
+                        Pre-Order <strong>#{{ $preOrder->id }}</strong>
+                        — {{ $preOrder->customer_name ?? 'Walk-in' }}
+                        — Payment: <strong>{{ ucfirst($preOrder->payment_method) }}</strong>
+                        — {{ $preOrder->items->count() }} item(s) pre-loaded into cart
+                    </span>
+                </div>
+            @endif
+
             @if($errors->any())<div class="alert alert-danger">{{ $errors->first() }}</div>@endif
+
             <div class="card pos-panel shadow-sm">
                 <div class="card-body">
                     <form method="POST" action="{{ route('sales.store') }}">
                         @csrf
+
+                        {{-- Link sale back to pre-order if present --}}
+                        @if(isset($preOrder))
+                            <input type="hidden" name="pre_order_id" value="{{ $preOrder->id }}">
+                        @endif
 
                         <div class="pos-toolbar d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2 mb-3">
                             <div>
@@ -24,7 +54,7 @@
                                     <option value="new" {{ old('patient_mode') === 'new' ? 'selected' : '' }}>New Patient</option>
                                 </select>
                             </div>
-                            <div class="col-md-9" id="existing_patient_wrap">
+                            <div class="col-md-9" id="existing_patient_wrap" style="{{ old('patient_mode') === 'new' ? 'display: none;' : '' }}">
                                 <select class="form-select" name="patient_id">
                                     <option value="">Select patient</option>
                                     @foreach($patients as $patient)
@@ -36,7 +66,7 @@
                             </div>
                         </div>
 
-                        <div id="new_patient_wrap" style="display: none;">
+                        <div id="new_patient_wrap" style="{{ old('patient_mode') === 'new' ? '' : 'display: none;' }}">
                             <div class="row">
                                 <div class="col-md-4 mb-3">
                                     <input type="text" name="patient_name" value="{{ old('patient_name') }}" class="form-control" placeholder="Patient Name">
@@ -150,12 +180,12 @@
                                             <div class="mb-3">
                                                 <label class="form-label">Payment Method</label>
                                                 <select class="form-select" name="payment_method" id="payment_method" required>
-                                                    <option value="cash" {{ old('payment_method') === 'cash' ? 'selected' : '' }}>Cash</option>
-                                                    <option value="card" {{ old('payment_method') === 'card' ? 'selected' : '' }}>Card</option>
-                                                    <option value="insurance" {{ old('payment_method') === 'insurance' ? 'selected' : '' }}>Insurance</option>
+                                                    <option value="cash" {{ old('payment_method', isset($preOrder) ? $preOrder->payment_method : 'cash') === 'cash' ? 'selected' : '' }}>Cash</option>
+                                                    <option value="card" {{ old('payment_method', isset($preOrder) ? $preOrder->payment_method : '') === 'card' ? 'selected' : '' }}>Card</option>
+                                                    <option value="insurance" {{ old('payment_method', isset($preOrder) ? $preOrder->payment_method : '') === 'insurance' ? 'selected' : '' }}>Insurance</option>
                                                 </select>
                                             </div>
-                                            <div id="payment_cash_fields" class="row g-3 mb-3" style="display: none;">
+                                            <div id="payment_cash_fields" class="row g-3 mb-3" style="{{ old('payment_method', isset($preOrder) ? $preOrder->payment_method : 'cash') === 'cash' ? '' : 'display: none;' }}">
                                                 <div class="col-12">
                                                     <label class="form-label">Cash Received</label>
                                                     <input type="number" step="0.01" min="0" class="form-control" name="payment_tendered" id="payment_tendered" value="{{ old('payment_tendered', '') }}" placeholder="Amount customer gives">
@@ -164,17 +194,16 @@
                                                 <div class="col-12">
                                                     <label class="form-label">Change Due</label>
                                                     <div class="form-control-plaintext fw-semibold" id="payment_change_due_display">P0.00</div>
-                                                    <input type="hidden" name="payment_change_due" id="payment_change_due" value="{{ old('payment_change_due', 0) }}">
                                                 </div>
                                             </div>
-                                            <div id="payment_card_fields" class="row mb-3" style="display: none;">
+                                            <div id="payment_card_fields" class="row mb-3" style="{{ old('payment_method', isset($preOrder) ? $preOrder->payment_method : '') === 'card' ? '' : 'display: none;' }}">
                                                 <div class="col-12">
                                                     <label class="form-label">Card Transaction Reference</label>
                                                     <input type="text" name="payment_reference" value="{{ old('payment_reference') }}" class="form-control" placeholder="Authorization code or reference">
                                                     <small class="text-muted">Required for credit/card payments.</small>
                                                 </div>
                                             </div>
-                                            <div id="payment_insurance_fields" class="row mb-3" style="display: none;">
+                                            <div id="payment_insurance_fields" class="row mb-3" style="{{ old('payment_method', isset($preOrder) ? $preOrder->payment_method : '') === 'insurance' ? '' : 'display: none;' }}">
                                                 <div class="col-12 mb-3">
                                                     <label class="form-label">Insurance Provider</label>
                                                     <input type="text" name="insurance_provider" value="{{ old('insurance_provider') }}" class="form-control" placeholder="Provider name">
@@ -195,8 +224,8 @@
                         </div>
                         <div id="sale-lines-hidden"></div>
 
-                        <button type="submit" class="btn btn-primary">Complete Release</button>
-                        <a href="{{ route('sales.index') }}" class="btn btn-outline-secondary">Cancel</a>
+                        <button type="submit" class="btn btn-primary mt-3">Complete Release</button>
+                        <a href="{{ route('sales.index') }}" class="btn btn-outline-secondary mt-3">Cancel</a>
                     </form>
                 </div>
             </div>
@@ -206,21 +235,31 @@
     @php
         $prescriptionItemsMap = [];
         $prescriptionPatientMap = [];
-        foreach ($prescriptions as $prescription) {
+        foreach ($prescriptions as $prescription):
             $productEntries = [];
-            foreach ($prescription->prescriptionItems as $item) {
+            foreach ($prescription->prescriptionItems as $item):
                 $productEntries[] = [
                     'product_id' => $item->product_id,
                     'quantity' => $item->quantity,
                 ];
-            }
+            endforeach;
             $prescriptionItemsMap[(string) $prescription->id] = $productEntries;
             $prescriptionPatientMap[(string) $prescription->id] = $prescription->patient_id;
-        }
+        endforeach;
     @endphp
 
-    <script type="application/json" id="prescription-items-data">{!! json_encode($prescriptionItemsMap) !!}</script>
-    <script type="application/json" id="prescription-patients-data">{!! json_encode($prescriptionPatientMap) !!}</script>
+    <script type="application/json" id="prescription-items-data">@json($prescriptionItemsMap)</script>
+    <script type="application/json" id="prescription-patients-data">@json($prescriptionPatientMap)</script>
+
+    {{-- Pre-order prefill data (null-safe: only emitted when $preOrder is set) --}}
+    @isset($preOrder)
+        <script type="application/json" id="preorder-prefill-data">@json(
+            $preOrder->items->map(fn($i) => [
+                'product_id' => $i->product_id,
+                'quantity'   => $i->quantity,
+            ])
+        )</script>
+    @endisset
 
     <script>
         (function () {
@@ -245,7 +284,6 @@
             const cardPaymentFields = document.getElementById('payment_card_fields');
             const insurancePaymentFields = document.getElementById('payment_insurance_fields');
             const paymentTenderedInput = document.getElementById('payment_tendered');
-            const paymentChangeDueInput = document.getElementById('payment_change_due');
             const paymentChangeDueDisplay = document.getElementById('payment_change_due_display');
             const form = document.querySelector('form');
             const cart = new Map();
@@ -277,7 +315,6 @@
                     const optionPatientId = option.getAttribute('data-patient-id');
                     option.hidden = selectedPatientId && optionPatientId !== selectedPatientId;
                 }
-                // Reset prescription if current selection is no longer visible
                 if (prescriptionSelect.options[prescriptionSelect.selectedIndex].hidden) {
                     prescriptionSelect.value = '';
                 }
@@ -310,8 +347,8 @@
                 cart.clear();
                 const missingProducts = [];
 
-                items.forEach((item) => {
-                    const button = document.querySelector(`button[data-product-id="${item.product_id}"]`);
+                items.forEach(function (item) {
+                    const button = document.querySelector('button[data-product-id="' + item.product_id + '"]');
                     if (!button) {
                         missingProducts.push(item.product_id);
                         return;
@@ -328,8 +365,8 @@
                         id: String(item.product_id),
                         name: button.dataset.productName,
                         price: Number(button.dataset.productPrice),
-                        stock,
-                        quantity,
+                        stock: stock,
+                        quantity: quantity,
                     });
                 });
 
@@ -341,6 +378,55 @@
             }
 
             function formatCurrency(value) { return 'P' + Number(value).toFixed(2); }
+
+            function createCartRow(item) {
+                const row = document.createElement('tr');
+
+                const nameCell = document.createElement('td');
+                const nameDiv = document.createElement('div');
+                nameDiv.textContent = item.name;
+                const stockSmall = document.createElement('small');
+                stockSmall.className = 'text-muted';
+                stockSmall.textContent = 'Stock: ' + Number(item.stock);
+                nameCell.appendChild(nameDiv);
+                nameCell.appendChild(stockSmall);
+
+                const qtyCell = document.createElement('td');
+                const qtyInput = document.createElement('input');
+                qtyInput.type = 'number';
+                qtyInput.min = '1';
+                qtyInput.max = String(Number(item.stock));
+                qtyInput.className = 'form-control form-control-sm cart-qty';
+                qtyInput.dataset.productId = String(item.id);
+                qtyInput.value = String(Number(item.quantity));
+                qtyCell.appendChild(qtyInput);
+
+                const actionsCell = document.createElement('td');
+                actionsCell.className = 'text-end';
+                const btnGroup = document.createElement('div');
+                btnGroup.className = 'btn-group btn-group-sm';
+                btnGroup.setAttribute('role', 'group');
+                btnGroup.setAttribute('aria-label', 'Quantity actions');
+
+                [
+                    { cls: 'btn-outline-secondary cart-dec', label: '-' },
+                    { cls: 'btn-outline-secondary cart-inc', label: '+' },
+                    { cls: 'btn-outline-danger cart-remove',  label: 'x' },
+                ].forEach(function (btnDef) {
+                    const btn = document.createElement('button');
+                    btn.type = 'button';
+                    btn.className = 'btn btn-sm ' + btnDef.cls;
+                    btn.dataset.productId = String(item.id);
+                    btn.textContent = btnDef.label;
+                    btnGroup.appendChild(btn);
+                });
+
+                actionsCell.appendChild(btnGroup);
+                row.appendChild(nameCell);
+                row.appendChild(qtyCell);
+                row.appendChild(actionsCell);
+                return row;
+            }
 
             function syncHiddenInputs() {
                 hiddenLines.innerHTML = '';
@@ -364,24 +450,7 @@
                 let total = 0;
                 for (const item of cart.values()) {
                     total += item.price * item.quantity;
-                    const row = document.createElement('tr');
-                    row.innerHTML = `
-                        <td>
-                            <div>${item.name}</div>
-                            <small class="text-muted">Stock: ${item.stock}</small>
-                        </td>
-                        <td>
-                            <input type="number" min="1" max="${item.stock}" class="form-control form-control-sm cart-qty" data-product-id="${item.id}" value="${item.quantity}">
-                        </td>
-                        <td class="text-end">
-                            <div class="btn-group btn-group-sm" role="group" aria-label="Quantity actions">
-                                <button type="button" class="btn btn-outline-secondary cart-dec" data-product-id="${item.id}">-</button>
-                                <button type="button" class="btn btn-outline-secondary cart-inc" data-product-id="${item.id}">+</button>
-                                <button type="button" class="btn btn-outline-danger cart-remove" data-product-id="${item.id}">x</button>
-                            </div>
-                        </td>
-                    `;
-                    cartRows.appendChild(row);
+                    cartRows.appendChild(createCartRow(item));
                 }
                 cartCount.textContent = cart.size;
                 cartTotal.textContent = formatCurrency(total);
@@ -397,7 +466,9 @@
                 if (existing) {
                     existing.quantity = Math.min(existing.quantity + 1, existing.stock);
                 } else {
-                    cart.set(product.id, { ...product, quantity: 1 });
+                    const newProduct = Object.assign({}, product);
+                    newProduct.quantity = 1;
+                    cart.set(product.id, newProduct);
                 }
                 renderCart();
             }
@@ -485,7 +556,7 @@
                     const query = medicineSearch.value.trim().toLowerCase();
                     medicineCards.querySelectorAll('.col-md-6.col-xl-4').forEach(function (cardCol) {
                         const card = cardCol.querySelector('.card');
-                        const haystack = card ? `${card.dataset.name || ''} ${card.dataset.generic || ''}` : '';
+                        const haystack = card ? (card.dataset.name || '') + ' ' + (card.dataset.generic || '') : '';
                         cardCol.style.display = !query || haystack.includes(query) ? '' : 'none';
                     });
                 });
@@ -496,7 +567,7 @@
             }
 
             function togglePaymentFields() {
-                const method = paymentMethod?.value;
+                const method = paymentMethod ? paymentMethod.value : '';
                 if (!method) {
                     return;
                 }
@@ -508,18 +579,19 @@
 
             function updateCashChange() {
                 const total = parseCurrency(cartTotal.textContent);
-                const tendered = parseCurrency(paymentTenderedInput?.value);
+                const tendered = parseCurrency(paymentTenderedInput ? paymentTenderedInput.value : '');
                 const changeDue = Math.max(0, tendered - total);
                 if (paymentChangeDueDisplay) {
-                    paymentChangeDueDisplay.textContent = `P${changeDue.toFixed(2)}`;
-                }
-                if (paymentChangeDueInput) {
-                    paymentChangeDueInput.value = changeDue.toFixed(2);
+                    paymentChangeDueDisplay.textContent = 'P' + changeDue.toFixed(2);
                 }
             }
 
-            paymentMethod?.addEventListener('change', togglePaymentFields);
-            paymentTenderedInput?.addEventListener('input', updateCashChange);
+            if (paymentMethod) {
+                paymentMethod.addEventListener('change', togglePaymentFields);
+            }
+            if (paymentTenderedInput) {
+                paymentTenderedInput.addEventListener('input', updateCashChange);
+            }
             togglePaymentFields();
 
             form.addEventListener('submit', function (event) {
@@ -530,7 +602,8 @@
                 }
 
                 const total = parseCurrency(cartTotal.textContent);
-                const method = paymentMethod?.value;
+                const method = paymentMethod ? paymentMethod.value : '';
+
                 if (method === 'cash') {
                     const tendered = parseCurrency(paymentTenderedInput?.value);
                     if (tendered < total) {
@@ -559,6 +632,50 @@
                     }
                 }
             });
+
+            // ── Boot cart from pre-order on page load ────────────────────────
+            (function bootPreOrderPrefill() {
+                const el = document.getElementById('preorder-prefill-data');
+                if (!el) { return; }
+
+                let items;
+                try { items = JSON.parse(el.textContent); } catch (e) { return; }
+                if (!Array.isArray(items) || items.length === 0) { return; }
+
+                const missing = [];
+                items.forEach(function (item) {
+                    const btn = document.querySelector(
+                        'button.add-to-cart[data-product-id="' + item.product_id + '"]'
+                    );
+                    if (!btn || btn.disabled) {
+                        missing.push(item.product_id);
+                        return;
+                    }
+                    const stock = Number(btn.dataset.productStock || 0);
+                    const qty   = Math.min(Number(item.quantity || 1), stock);
+                    if (stock <= 0 || qty <= 0) {
+                        missing.push(item.product_id);
+                        return;
+                    }
+                    cart.set(String(item.product_id), {
+                        id:       String(item.product_id),
+                        name:     btn.dataset.productName,
+                        price:    Number(btn.dataset.productPrice),
+                        stock:    stock,
+                        quantity: qty,
+                    });
+                });
+
+                renderCart();
+
+                if (missing.length > 0) {
+                    window.alert(
+                        missing.length + ' pre-order item(s) could not be added — ' +
+                        'they may be out of stock at the front location.'
+                    );
+                }
+            })();
+            // ── end pre-order prefill ────────────────────────────────────────
 
             renderCart();
         })();

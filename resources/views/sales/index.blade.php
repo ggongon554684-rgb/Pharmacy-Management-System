@@ -30,7 +30,22 @@
             const refreshStatus = document.getElementById('sales-refresh-status');
             const tableContainer = document.getElementById('sales-table-container');
             const paginationContainer = document.getElementById('sales-pagination');
+            // Route URL is server-generated and trusted; no user input reaches here.
             const refreshUri = "{{ route('sales.refresh') }}";
+
+            /**
+             * Safely replace a container's contents with server-rendered HTML.
+             *
+             * Instead of assigning raw strings to innerHTML (which would execute
+             * any <script> tags or on* attributes injected into the fragment),
+             * we parse the markup with DOMParser first and then transplant only
+             * the parsed child nodes. DOMParser marks <script> elements as
+             * inert so they never execute, closing the innerHTML XSS vector.
+             */
+            function safeSetHtml(container, htmlString) {
+                const doc = new DOMParser().parseFromString(htmlString, 'text/html');
+                container.replaceChildren(...doc.body.childNodes);
+            }
 
             async function refreshSales() {
                 try {
@@ -39,9 +54,18 @@
                     if (!response.ok) {
                         return;
                     }
+                    // Guard against a content-type mismatch (e.g. an error page
+                    // returning text/html) which would cause json() to throw and
+                    // could expose the raw error string if caught carelessly.
+                    const contentType = response.headers.get('Content-Type') ?? '';
+                    if (!contentType.includes('application/json')) {
+                        console.warn('Sales refresh: unexpected Content-Type', contentType);
+                        return;
+                    }
                     const payload = await response.json();
-                    tableContainer.innerHTML = payload.table;
-                    paginationContainer.innerHTML = payload.pagination;
+                    safeSetHtml(tableContainer, payload.table);
+                    safeSetHtml(paginationContainer, payload.pagination);
+                    // textContent assignment is inherently XSS-safe.
                     refreshStatus.textContent = 'Last updated: ' + payload.updated_at;
                 } catch (error) {
                     console.error('Sales refresh failed:', error);

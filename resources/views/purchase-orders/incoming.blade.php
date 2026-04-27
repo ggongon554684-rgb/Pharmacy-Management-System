@@ -26,6 +26,16 @@
             const paginationContainer = document.getElementById('incoming-pagination');
             const refreshUri = "{{ route('purchase-orders.incoming.refresh') }}";
 
+            /**
+             * Safely replace a container's contents with server-rendered HTML.
+             * DOMParser marks inert any <script> nodes in the parsed fragment,
+             * so they cannot execute — eliminating the innerHTML XSS vector.
+             */
+            function safeSetHtml(container, htmlString) {
+                const doc = new DOMParser().parseFromString(htmlString, 'text/html');
+                container.replaceChildren(...doc.body.childNodes);
+            }
+
             async function refreshIncoming() {
                 try {
                     const url = refreshUri + window.location.search;
@@ -33,9 +43,14 @@
                     if (!response.ok) {
                         return;
                     }
+                    const contentType = response.headers.get('Content-Type') ?? '';
+                    if (!contentType.includes('application/json')) {
+                        console.warn('Incoming refresh: unexpected Content-Type', contentType);
+                        return;
+                    }
                     const payload = await response.json();
-                    tableContainer.innerHTML = payload.table;
-                    paginationContainer.innerHTML = payload.pagination;
+                    safeSetHtml(tableContainer, payload.table);
+                    safeSetHtml(paginationContainer, payload.pagination);
                     refreshStatus.textContent = 'Last updated: ' + payload.updated_at;
                 } catch (error) {
                     console.error('Incoming deliveries refresh failed:', error);

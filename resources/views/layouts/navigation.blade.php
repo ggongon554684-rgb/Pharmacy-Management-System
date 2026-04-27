@@ -155,6 +155,9 @@
             @can('view audit logs')
                 <a class="side-nav-link {{ request()->routeIs('audit-logs.*') ? 'active' : '' }}" href="{{ route('audit-logs.index') }}"><i class="bi bi-journal-text"></i><span class="side-nav-label">Audit Logs</span></a>
             @endcan
+            @can('manage system')
+                <a class="side-nav-link {{ request()->routeIs('admin.trash.*') ? 'active' : '' }}" href="{{ route('admin.trash.index') }}"><i class="bi bi-trash"></i><span class="side-nav-label">Trash</span></a>
+            @endcan
         @endif
     </div>
     <div class="side-nav-footer">
@@ -201,6 +204,9 @@
                     @endcan
                     @can('view reports')
                         <li class="nav-item"><a class="nav-link {{ request()->routeIs('reports.*') ? 'active' : '' }}" href="{{ route('reports.inventory') }}">Reports</a></li>
+                    @endcan
+                    @can('manage system')
+                        <li class="nav-item"><a class="nav-link {{ request()->routeIs('admin.trash.*') ? 'active' : '' }}" href="{{ route('admin.trash.index') }}">Trash</a></li>
                     @endcan
                 @endif
             </ul>

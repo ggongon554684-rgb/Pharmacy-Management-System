@@ -21,17 +21,32 @@ class PreOrder extends Model
     ];
 
     protected $casts = [
-        'scanned_at' => 'datetime',
+        'scanned_at'   => 'datetime',
         'fulfilled_at' => 'datetime',
     ];
 
     public function items()
     {
-        return $this->hasMany('App\\Models\\PreOrderItem');
+        return $this->hasMany(PreOrderItem::class);
     }
 
     public function sale()
     {
         return $this->belongsTo(Sale::class);
+    }
+
+    public function fulfilledBy()
+    {
+        return $this->belongsTo(User::class, 'fulfilled_by');
+    }
+
+    public function isPending(): bool
+    {
+        return $this->status === 'pending';
+    }
+
+    public function isFulfilled(): bool
+    {
+        return $this->status === 'fulfilled';
     }
 }

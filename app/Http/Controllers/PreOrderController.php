@@ -36,20 +36,20 @@ class PreOrderController extends Controller
     public function storePublic(Request $request)
     {
         $validated = $request->validate([
-            'customer_name' => 'nullable|string|max:255',
-            'payment_method' => 'required|in:cash,card,insurance',
-            'product_ids' => 'required|array|min:1',
-            'product_ids.*' => 'required|exists:products,id',
-            'quantities' => 'required|array|min:1',
-            'quantities.*' => 'required|integer|min:1',
+            'customer_name'    => 'nullable|string|max:255',
+            'payment_method'   => 'required|in:cash,card,insurance',
+            'product_ids'      => 'required|array|min:1',
+            'product_ids.*'    => 'required|exists:products,id',
+            'quantities'       => 'required|array|min:1',
+            'quantities.*'     => 'required|integer|min:1',
         ]);
 
         $preOrder = DB::transaction(function () use ($validated) {
             $preOrder = PreOrder::create([
-                'customer_name' => $validated['customer_name'] ?: null,
+                'customer_name'  => $validated['customer_name'] ?: null,
                 'payment_method' => $validated['payment_method'],
-                'scan_token' => Str::upper(Str::random(10)),
-                'status' => 'pending',
+                'scan_token'     => Str::upper(Str::random(10)),
+                'status'         => 'pending',
             ]);
 
             foreach ($validated['product_ids'] as $idx => $productId) {
@@ -60,9 +60,9 @@ class PreOrderController extends Controller
                 $product = Product::findOrFail($productId);
                 $preOrder->items()->create([
                     'product_id' => $productId,
-                    'quantity' => $qty,
+                    'quantity'   => $qty,
                     'unit_price' => $product->price,
-                    'subtotal' => $qty * (float) $product->price,
+                    'subtotal'   => $qty * (float) $product->price,
                 ]);
             }
 
@@ -84,6 +84,33 @@ class PreOrderController extends Controller
         return view('public.kiosk-ticket', compact('preOrder', 'scanUrl'));
     }
 
+    /**
+     * Pharmacist scans the QR → lands here (authenticated route).
+     * If already fulfilled, jump straight to the receipt.
+     * Otherwise redirect to sales/create pre-filled with the pre-order items.
+     */
+    public function scanAndPrefill(PreOrder $preOrder)
+    {
+        if ($preOrder->isFulfilled() && $preOrder->sale_id) {
+            return redirect()
+                ->route('sales.show', ['sale' => $preOrder->sale_id, 'print' => 1])
+                ->with('success', 'Order already fulfilled. Opening receipt.');
+        }
+
+        // Mark as scanned (but NOT fulfilled yet — the cashier completes the sale)
+        if (! $preOrder->scanned_at) {
+            $preOrder->update(['scanned_at' => now()]);
+        }
+
+        return redirect()
+            ->route('sales.create', ['pre_order_id' => $preOrder->id])
+            ->with('info', "Pre-order #{$preOrder->id} loaded. Review items and complete the sale.");
+    }
+
+    /**
+     * Legacy fully-automated scan → create sale in one step.
+     * Kept in case you still need the old flow via a different route.
+     */
     public function scanAndCreateSale(PreOrder $preOrder)
     {
         if ($preOrder->status === 'fulfilled' && $preOrder->sale_id) {
@@ -98,16 +125,17 @@ class PreOrderController extends Controller
                     return null;
                 }
 
-                $lineEntries = [];
-                $totalAmount = 0;
+                $lineEntries  = [];
+                $totalAmount  = 0;
 
                 $requestedByProduct = [];
                 foreach ($preOrder->items as $item) {
-                    $requestedByProduct[$item->product_id] = ($requestedByProduct[$item->product_id] ?? 0) + (int) $item->quantity;
+                    $requestedByProduct[$item->product_id] =
+                        ($requestedByProduct[$item->product_id] ?? 0) + (int) $item->quantity;
                 }
 
                 foreach ($requestedByProduct as $productId => $requestedQty) {
-                    $product = Product::findOrFail($productId);
+                    $product     = Product::findOrFail($productId);
                     $allocations = $this->inventoryReleaseService->releaseProduct(
                         (int) $productId,
                         $requestedQty,
@@ -119,61 +147,61 @@ class PreOrderController extends Controller
                     foreach ($allocations as $allocation) {
                         $lineEntries[] = [
                             'inventory_batch_id' => $allocation['inventory_batch_id'],
-                            'product_id' => (int) $productId,
-                            'quantity' => $allocation['quantity'],
-                            'unit_price' => $product->price,
-                            'subtotal' => $allocation['quantity'] * (float) $product->price,
+                            'product_id'         => (int) $productId,
+                            'quantity'           => $allocation['quantity'],
+                            'unit_price'         => $product->price,
+                            'subtotal'           => $allocation['quantity'] * (float) $product->price,
                         ];
                         $totalAmount += $allocation['quantity'] * (float) $product->price;
                     }
                 }
 
                 $sale = Sale::create([
-                    'user_id' => auth()->id(),
-                    'patient_id' => null,
-                    'prescription_id' => null,
-                    'total_amount' => $totalAmount,
-                    'payment_method' => $preOrder->payment_method,
+                    'user_id'          => auth()->id(),
+                    'patient_id'       => null,
+                    'prescription_id'  => null,
+                    'total_amount'     => $totalAmount,
+                    'payment_method'   => $preOrder->payment_method,
                 ]);
 
                 foreach ($lineEntries as $entry) {
                     SaleLineItem::create([
-                        'sale_id' => $sale->id,
+                        'sale_id'            => $sale->id,
                         'inventory_batch_id' => $entry['inventory_batch_id'],
-                        'quantity' => $entry['quantity'],
-                        'unit_price' => $entry['unit_price'],
-                        'subtotal' => $entry['subtotal'],
+                        'quantity'           => $entry['quantity'],
+                        'unit_price'         => $entry['unit_price'],
+                        'subtotal'           => $entry['subtotal'],
                     ]);
 
                     StockMovement::create([
-                        'product_id' => $entry['product_id'],
+                        'product_id'         => $entry['product_id'],
                         'inventory_batch_id' => $entry['inventory_batch_id'],
-                        'moved_by' => auth()->id(),
-                        'type' => 'release',
-                        'quantity' => $entry['quantity'],
-                        'reference_type' => Sale::class,
-                        'reference_id' => $sale->id,
-                        'notes' => 'Released from scanned pre-order #' . $preOrder->id,
+                        'moved_by'           => auth()->id(),
+                        'type'               => 'release',
+                        'quantity'           => $entry['quantity'],
+                        'reference_type'     => Sale::class,
+                        'reference_id'       => $sale->id,
+                        'notes'              => 'Released from scanned pre-order #' . $preOrder->id,
                     ]);
                 }
 
                 $preOrder->update([
-                    'status' => 'fulfilled',
-                    'scanned_at' => now(),
+                    'status'       => 'fulfilled',
+                    'scanned_at'   => now(),
                     'fulfilled_at' => now(),
-                    'sale_id' => $sale->id,
+                    'sale_id'      => $sale->id,
                     'fulfilled_by' => auth()->id(),
                 ]);
 
                 AuditLog::create([
-                    'user_id' => auth()->id(),
-                    'action' => 'sale_created_from_preorder',
-                    'auditable_id' => $sale->id,
+                    'user_id'        => auth()->id(),
+                    'action'         => 'sale_created_from_preorder',
+                    'auditable_id'   => $sale->id,
                     'auditable_type' => Sale::class,
-                    'old_values' => null,
-                    'new_values' => [
+                    'old_values'     => null,
+                    'new_values'     => [
                         'pre_order_id' => $preOrder->id,
-                        'sale_id' => $sale->id,
+                        'sale_id'      => $sale->id,
                     ],
                 ]);
 

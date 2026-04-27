@@ -11,6 +11,8 @@ use App\Models\SaleLineItem;
 use App\Models\StockRequest;
 use App\Models\InventoryBatch;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 
 class DashboardController extends Controller
 {
@@ -19,26 +21,65 @@ class DashboardController extends Controller
         $user = auth()->user();
         $roleNames = $user->roles->pluck('name');
 
-        $dashboardData = [
-            'patientCount' => Patient::count(),
-            'productCount' => Product::count(),
-            'frontShopStockUnits' => (int) InventoryBatch::query()
-                ->forLocationCode('front')
-                ->sum('quantity'),
-            'backInventoryStockUnits' => (int) InventoryBatch::query()
-                ->forLocationCode('back')
-                ->sum('quantity'),
-            'lowStockCount' => Product::query()
-                ->whereRaw('COALESCE((SELECT SUM(quantity) FROM inventory_batches WHERE inventory_batches.product_id = products.id), 0) <= reorder_level')
-                ->count(),
-            'auditCount' => AuditLog::count(),
-            'recentAudits' => AuditLog::with('user')->latest()->limit(5)->get(),
-        ];
+        $dashboardData = $this->getSharedDashboardData();
 
         if ($roleNames->contains('admin')) {
-            $trendStart = Carbon::today()->subDays(6);
-            $trendEnd = Carbon::today();
+            return view('admin.dashboard', array_merge($dashboardData, $this->getAdminData()));
+        } elseif ($roleNames->contains('staff')) {
+            return view('staff.dashboard', array_merge($dashboardData, $this->getStaffData()));
+        } elseif ($roleNames->contains('pharmacist')) {
+            return view('pharmacist.dashboard', array_merge($dashboardData, $this->getPharmacistData($user)));
+        } else {
+            return view('dashboard', $dashboardData);
+        }
+    }
 
+    // -------------------------------------------------------------------------
+    // Shared data — loaded for every role.
+    // Cached for 5 minutes since counts rarely change second-to-second.
+    // -------------------------------------------------------------------------
+    private function getSharedDashboardData(): array
+    {
+        return Cache::remember('dashboard.shared', 300, function () {
+            // Single query: get both location stock sums at once instead of two queries
+            $locationStocks = InventoryBatch::query()
+                ->join('inventory_locations', 'inventory_locations.id', '=', 'inventory_batches.location_id')
+                ->whereIn('inventory_locations.code', ['front', 'back'])
+                ->selectRaw('inventory_locations.code, SUM(inventory_batches.quantity) as total')
+                ->groupBy('inventory_locations.code')
+                ->pluck('total', 'code');
+
+            // Single query: count low stock using a pure SQL HAVING clause
+            // instead of fetching all products into PHP and filtering in memory
+            $lowStockCount = DB::table('products')
+                ->leftJoin('inventory_batches', 'inventory_batches.product_id', '=', 'products.id')
+                ->selectRaw('products.id, products.reorder_level, COALESCE(SUM(inventory_batches.quantity), 0) as stock')
+                ->groupBy('products.id', 'products.reorder_level')
+                ->havingRaw('stock <= products.reorder_level')
+                ->count();
+
+            return [
+                'patientCount'            => Patient::count(),
+                'productCount'            => Product::count(),
+                'frontShopStockUnits'     => (int) ($locationStocks['front'] ?? 0),
+                'backInventoryStockUnits' => (int) ($locationStocks['back'] ?? 0),
+                'lowStockCount'           => $lowStockCount,
+                'auditCount'              => AuditLog::count(),
+                'recentAudits'            => AuditLog::with('user')->latest()->limit(5)->get(),
+            ];
+        });
+    }
+
+    // -------------------------------------------------------------------------
+    // Admin-only data. Cached for 2 minutes — charts are near-realtime enough.
+    // -------------------------------------------------------------------------
+    private function getAdminData(): array
+    {
+        return Cache::remember('dashboard.admin', 120, function () {
+            $trendStart = Carbon::today()->subDays(6);
+            $trendEnd   = Carbon::today();
+
+            // Fetch sales and purchases trends in parallel-friendly separate queries
             $salesTrend = Sale::query()
                 ->selectRaw('DATE(created_at) as day, SUM(total_amount) as total')
                 ->whereBetween('created_at', [$trendStart->copy()->startOfDay(), $trendEnd->copy()->endOfDay()])
@@ -51,27 +92,42 @@ class DashboardController extends Controller
                 ->groupBy('day')
                 ->pluck('total', 'day');
 
-            $trendLabels = [];
-            $salesSeries = [];
+            $trendLabels   = [];
+            $salesSeries   = [];
             $purchaseSeries = [];
 
             for ($date = $trendStart->copy(); $date->lte($trendEnd); $date->addDay()) {
-                $key = $date->toDateString();
-                $trendLabels[] = $date->format('M d');
-                $salesSeries[] = round((float) ($salesTrend[$key] ?? 0), 2);
+                $key             = $date->toDateString();
+                $trendLabels[]   = $date->format('M d');
+                $salesSeries[]   = round((float) ($salesTrend[$key] ?? 0), 2);
                 $purchaseSeries[] = round((float) ($purchaseTrend[$key] ?? 0), 2);
             }
 
-            $lowStockProducts = Product::query()
-                ->whereRaw('COALESCE((SELECT SUM(quantity) FROM inventory_batches WHERE inventory_batches.product_id = products.id), 0) <= reorder_level')
-                ->count();
-            $normalStockProducts = Product::query()
-                ->whereRaw('COALESCE((SELECT SUM(quantity) FROM inventory_batches WHERE inventory_batches.product_id = products.id), 0) > reorder_level')
-                ->whereRaw('COALESCE((SELECT SUM(quantity) FROM inventory_batches WHERE inventory_batches.product_id = products.id), 0) <= (reorder_level * 2)')
-                ->count();
-            $overstockProducts = Product::query()
-                ->whereRaw('COALESCE((SELECT SUM(quantity) FROM inventory_batches WHERE inventory_batches.product_id = products.id), 0) > (reorder_level * 2)')
-                ->count();
+            // Stock health: single SQL query with conditional aggregation
+            // instead of loading all products into PHP memory
+            $stockHealth = DB::table('products')
+                ->leftJoin('inventory_batches', 'inventory_batches.product_id', '=', 'products.id')
+                ->selectRaw('
+                    products.reorder_level,
+                    COALESCE(SUM(inventory_batches.quantity), 0) as stock
+                ')
+                ->groupBy('products.id', 'products.reorder_level')
+                ->get();
+
+            $low      = 0;
+            $normal   = 0;
+            $overstock = 0;
+            foreach ($stockHealth as $row) {
+                $stock   = (int) $row->stock;
+                $reorder = (int) $row->reorder_level;
+                if ($stock <= $reorder) {
+                    $low++;
+                } elseif ($stock <= $reorder * 2) {
+                    $normal++;
+                } else {
+                    $overstock++;
+                }
+            }
 
             $topMovingProducts = SaleLineItem::query()
                 ->join('inventory_batches', 'inventory_batches.id', '=', 'sale_line_items.inventory_batch_id')
@@ -82,53 +138,55 @@ class DashboardController extends Controller
                 ->limit(8)
                 ->get();
 
-            $dashboardData = array_merge($dashboardData, [
-                'totalRevenue' => (float) Sale::sum('total_amount'),
-                'totalPurchaseCost' => (float) PurchaseOrder::sum('total_cost'),
-                'recentSales' => Sale::with('patient')->latest()->limit(5)->get(),
-                'recentPurchaseOrders' => PurchaseOrder::latest()->limit(5)->get(),
-                'incomingDeliveries' => PurchaseOrder::query()
+            return [
+                'totalRevenue'        => (float) Sale::sum('total_amount'),
+                'totalPurchaseCost'   => (float) PurchaseOrder::sum('total_cost'),
+                'recentSales'         => Sale::with('patient')->latest()->limit(5)->get(),
+                'recentPurchaseOrders'=> PurchaseOrder::latest()->limit(5)->get(),
+                'incomingDeliveries'  => PurchaseOrder::query()
                     ->whereIn('status', ['approved', 'pending'])
                     ->whereNotNull('expected_date')
                     ->orderBy('expected_date')
                     ->limit(6)
                     ->get(),
-                'trendLabels' => $trendLabels,
-                'salesTrendSeries' => $salesSeries,
+                'topMovingProducts'   => $topMovingProducts,
+                'trendLabels'         => $trendLabels,
+                'salesTrendSeries'    => $salesSeries,
                 'purchaseTrendSeries' => $purchaseSeries,
-                'stockHealthLabels' => ['Low Stock', 'Normal Stock', 'Overstock'],
-                'stockHealthSeries' => [$lowStockProducts, $normalStockProducts, $overstockProducts],
-                'topMovingProductLabels' => $topMovingProducts->pluck('product_name')->values()->all(),
-                'topMovingProductSeries' => $topMovingProducts->pluck('total_sold')->map(fn ($value) => (int) $value)->values()->all(),
-            ]);
-            return view('admin.dashboard', $dashboardData);
-        } elseif ($roleNames->contains('staff')) {
-            $lowStockItems = Product::query()
-                ->withSum('inventoryBatches', 'quantity')
-                ->whereRaw('COALESCE((SELECT SUM(quantity) FROM inventory_batches WHERE inventory_batches.product_id = products.id), 0) <= reorder_level')
-                ->orderByRaw('COALESCE(inventory_batches_sum_quantity, 0) ASC')
-                ->limit(5)
-                ->get();
+                'stockHealthLabels'   => ['Low Stock', 'Normal Stock', 'Overstock'],
+                'stockHealthSeries'   => [$low, $normal, $overstock],
+            ];
+        });
+    }
 
-            $pendingTransfers = StockRequest::query()
-                ->with('product')
-                ->where('status', 'pending')
-                ->latest()
-                ->limit(5)
-                ->get();
-
-            $pendingIncomingDeliveries = PurchaseOrder::query()
-                ->whereIn('status', ['pending', 'approved'])
-                ->orderBy('expected_date')
-                ->limit(3)
-                ->get();
-
+    // -------------------------------------------------------------------------
+    // Staff-only data. Cached for 2 minutes.
+    // -------------------------------------------------------------------------
+    private function getStaffData(): array
+    {
+        return Cache::remember('dashboard.staff', 120, function () {
             $trendStart = Carbon::today()->subDays(6)->startOfDay();
-            $trendEnd = Carbon::today()->endOfDay();
+            $trendEnd   = Carbon::today()->endOfDay();
+
             $trendDays = [];
             for ($date = $trendStart->copy(); $date->lte($trendEnd); $date->addDay()) {
                 $trendDays[] = $date->toDateString();
             }
+
+            // Low stock: use subquery to avoid ONLY_FULL_GROUP_BY issues
+            $lowStockItems = DB::table('products')
+                ->select('products.id', 'products.name', 'products.generic_name', 'products.sku', 'products.price', 'products.reorder_level', 'products.created_at', 'products.updated_at', 'products.deleted_at')
+                ->selectSub(function ($query) {
+                    $query->from('inventory_batches')
+                        ->selectRaw('COALESCE(SUM(quantity), 0)')
+                        ->whereColumn('product_id', 'products.id');
+                }, 'inventory_batches_sum_quantity')
+                ->leftJoin('inventory_batches', 'inventory_batches.product_id', '=', 'products.id')
+                ->groupBy('products.id', 'products.name', 'products.generic_name', 'products.sku', 'products.price', 'products.reorder_level', 'products.created_at', 'products.updated_at', 'products.deleted_at')
+                ->havingRaw('inventory_batches_sum_quantity <= products.reorder_level')
+                ->orderByRaw('inventory_batches_sum_quantity ASC')
+                ->limit(5)
+                ->get();
 
             $topConsumedProducts = SaleLineItem::query()
                 ->join('inventory_batches', 'inventory_batches.id', '=', 'sale_line_items.inventory_batch_id')
@@ -141,9 +199,14 @@ class DashboardController extends Controller
                 ->limit(4)
                 ->get();
 
+            // Single trend query filtered to only the top-4 product IDs
+            // instead of fetching the entire table and pivoting in PHP
+            $topProductIds = $topConsumedProducts->pluck('id')->all();
+
             $rawTrendRows = SaleLineItem::query()
                 ->join('inventory_batches', 'inventory_batches.id', '=', 'sale_line_items.inventory_batch_id')
                 ->join('sales', 'sales.id', '=', 'sale_line_items.sale_id')
+                ->whereIn('inventory_batches.product_id', $topProductIds)
                 ->whereBetween('sales.created_at', [$trendStart, $trendEnd])
                 ->selectRaw('inventory_batches.product_id as product_id, DATE(sales.created_at) as sale_day, SUM(sale_line_items.quantity) as qty')
                 ->groupBy('inventory_batches.product_id', 'sale_day')
@@ -154,7 +217,7 @@ class DashboardController extends Controller
                 $qtyByProductAndDay[(int) $row->product_id][$row->sale_day] = (int) $row->qty;
             }
 
-            $trendColors = ['#378ADD', '#1D9E75', '#EF9F27', '#7F77DD'];
+            $trendColors             = ['#378ADD', '#1D9E75', '#EF9F27', '#7F77DD'];
             $consumptionTrendDatasets = [];
             foreach ($topConsumedProducts as $index => $topProduct) {
                 $data = [];
@@ -162,53 +225,44 @@ class DashboardController extends Controller
                     $data[] = $qtyByProductAndDay[(int) $topProduct->id][$day] ?? 0;
                 }
                 $consumptionTrendDatasets[] = [
-                    'label' => $topProduct->name,
-                    'data' => $data,
+                    'label'       => $topProduct->name,
+                    'data'        => $data,
                     'borderColor' => $trendColors[$index] ?? '#378ADD',
                 ];
             }
 
-            $staffData = array_merge($dashboardData, [
-                'pendingStockRequestCount' => StockRequest::query()
-                    ->where('status', 'pending')
-                    ->count(),
-                'pendingIncomingDeliveriesCount' => PurchaseOrder::query()
-                    ->whereIn('status', ['pending', 'approved'])
-                    ->count(),
-                'lowStockItems' => $lowStockItems,
-                'pendingTransfers' => $pendingTransfers,
-                'pendingIncomingDeliveries' => $pendingIncomingDeliveries,
-                'trendLabels' => collect($trendDays)->map(fn (string $day) => Carbon::parse($day)->format('D'))->values()->all(),
-                'consumptionTrendDatasets' => $consumptionTrendDatasets,
-            ]);
-            return view('staff.dashboard', $staffData);
-        } elseif ($roleNames->contains('pharmacist')) {
-            $todayStart = Carbon::today()->startOfDay();
-            $todayEnd = Carbon::today()->endOfDay();
+            return [
+                'pendingStockRequestCount'      => StockRequest::where('status', 'pending')->count(),
+                'pendingIncomingDeliveriesCount'=> PurchaseOrder::whereIn('status', ['pending', 'approved'])->count(),
+                'lowStockItems'                 => $lowStockItems,
+                'pendingTransfers'              => StockRequest::with('product')->where('status', 'pending')->latest()->limit(5)->get(),
+                'pendingIncomingDeliveries'     => PurchaseOrder::whereIn('status', ['pending', 'approved'])->orderBy('expected_date')->limit(3)->get(),
+                'trendLabels'                   => collect($trendDays)->map(fn(string $d) => Carbon::parse($d)->format('D'))->values()->all(),
+                'consumptionTrendDatasets'      => $consumptionTrendDatasets,
+            ];
+        });
+    }
 
-            $pharmacistData = array_merge($dashboardData, [
-                'mySalesTodayCount' => Sale::query()
-                    ->where('user_id', $user->id)
-                    ->whereBetween('created_at', [$todayStart, $todayEnd])
-                    ->count(),
-                'mySalesTodayTotal' => (float) Sale::query()
-                    ->where('user_id', $user->id)
-                    ->whereBetween('created_at', [$todayStart, $todayEnd])
-                    ->sum('total_amount'),
-                'myPendingStockRequests' => StockRequest::query()
-                    ->where('requested_by', $user->id)
-                    ->where('status', 'pending')
-                    ->count(),
-                'myRecentSales' => Sale::with('patient')
-                    ->where('user_id', $user->id)
-                    ->latest()
-                    ->limit(6)
-                    ->get(),
-            ]);
+    // -------------------------------------------------------------------------
+    // Pharmacist data. NOT cached — figures are personal and must be live.
+    // -------------------------------------------------------------------------
+    private function getPharmacistData($user): array
+    {
+        $todayStart = Carbon::today()->startOfDay();
+        $todayEnd   = Carbon::today()->endOfDay();
 
-            return view('pharmacist.dashboard', $pharmacistData);
-        } else {
-            return view('dashboard', $dashboardData);
-        }
+        // Combine count + sum into a single query using selectRaw
+        $todayStats = Sale::query()
+            ->where('user_id', $user->id)
+            ->whereBetween('created_at', [$todayStart, $todayEnd])
+            ->selectRaw('COUNT(*) as sale_count, COALESCE(SUM(total_amount), 0) as sale_total')
+            ->first();
+
+        return [
+            'mySalesTodayCount'      => (int) $todayStats->sale_count,
+            'mySalesTodayTotal'      => (float) $todayStats->sale_total,
+            'myPendingStockRequests' => StockRequest::where('requested_by', $user->id)->where('status', 'pending')->count(),
+            'myRecentSales'          => Sale::with('patient')->where('user_id', $user->id)->latest()->limit(6)->get(),
+        ];
     }
 }

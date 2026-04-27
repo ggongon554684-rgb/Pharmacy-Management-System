@@ -7,8 +7,15 @@ use Illuminate\Support\Facades\Auth;
 
 class AuditLogObserver
 {
+    private function shouldSkip(Model $model): bool
+    {
+        return $model instanceof \App\Models\AuditLog;
+    }
+
     public Function created(Model $model): void
     {
+        if ($this->shouldSkip($model)) return;
+
         AuditLog::create([
             'user_id' => Auth::id(),
             'action' => 'created',
@@ -22,6 +29,8 @@ class AuditLogObserver
 
     public function updated(Model $model): void
     {
+        if ($this->shouldSkip($model)) return;
+
         AuditLog::create([
             'user_id' => Auth::id(),
             'action' => 'updated',
@@ -34,6 +43,8 @@ class AuditLogObserver
 
     public function deleted(Model $model): void
     {
+        if ($this->shouldSkip($model)) return;
+
         AuditLog::create([
             'user_id' => Auth::id(),
             'action' => 'deleted',
