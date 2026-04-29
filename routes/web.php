@@ -32,7 +32,11 @@ use App\Http\Controllers\Auth\RegisteredUserController;
 */
 
 Route::get('/', function () {
-    return redirect()->route('login');
+    if (auth()->check()) {
+        return redirect()->route('dashboard');
+    }
+
+    return view('welcome');
 });
 
 Route::get('/kiosk-order', [PreOrderController::class, 'createPublic'])->name('public.kiosk-order');

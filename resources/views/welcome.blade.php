@@ -1,133 +1,869 @@
 <!DOCTYPE html>
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
-    <head>
-        <meta charset="utf-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Doseas — Pharmacy Management System</title>
+    @vite(['resources/css/app.css', 'resources/js/app.js'])
+    <link rel="preconnect" href="https://fonts.bunny.net">
+    <link href="https://fonts.bunny.net/css?family=dm-serif-display:400,400i|dm-sans:300,400,500,600&display=swap" rel="stylesheet"/>
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        :root {
+            --bg: #080d18;
+            --bg-card: #0f1724;
+            --bg-card-alt: #121c2e;
+            --border: rgba(255,255,255,0.07);
+            --border-md: rgba(255,255,255,0.12);
+            --accent: #3b82f6;
+            --accent-dim: rgba(59,130,246,0.1);
+            --green: #10b981;
+            --green-dim: rgba(16,185,129,0.1);
+            --amber: #f59e0b;
+            --amber-dim: rgba(245,158,11,0.1);
+            --purple: #a78bfa;
+            --purple-dim: rgba(167,139,250,0.1);
+            --red: #f87171;
+            --red-dim: rgba(248,113,113,0.1);
+            --tp: #e8f0ff;
+            --ts: #6b7fa3;
+            --tm: #3a4a65;
+            --font-d: 'DM Serif Display', Georgia, serif;
+            --font-b: 'DM Sans', system-ui, sans-serif;
+            --r: 12px;
+            --rs: 8px;
+        }
+        html { scroll-behavior: smooth; }
+        body {
+            background: var(--bg);
+            color: var(--tp);
+            font-family: var(--font-b);
+            font-size: 15px;
+            line-height: 1.65;
+            -webkit-font-smoothing: antialiased;
+            overflow-x: hidden;
+        }
+        body::before {
+            content: '';
+            position: fixed; inset: 0;
+            background-image: linear-gradient(rgba(59,130,246,0.025) 1px, transparent 1px), linear-gradient(90deg, rgba(59,130,246,0.025) 1px, transparent 1px);
+            background-size: 48px 48px;
+            pointer-events: none; z-index: 0;
+        }
 
-        <title>Laravel</title>
+        /* NAV */
+        nav {
+            position: fixed; top: 0; left: 0; right: 0; z-index: 200;
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 0 2.5rem; height: 58px;
+            background: rgba(8,13,24,0.88);
+            backdrop-filter: blur(14px);
+            border-bottom: 1px solid var(--border);
+        }
+        .nav-brand { display: flex; align-items: center; gap: 10px; font-family: var(--font-d); font-size: 1.15rem; color: var(--tp); text-decoration: none; letter-spacing: -0.02em; }
+        .pill-badge { font-family: var(--font-b); font-size: 10px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; background: var(--accent-dim); color: var(--accent); border: 1px solid rgba(59,130,246,0.28); padding: 2px 8px; border-radius: 100px; }
+        .nav-links { display: flex; align-items: center; gap: 6px; }
+        .nav-links a { font-size: 14px; font-weight: 500; color: var(--ts); text-decoration: none; padding: 6px 14px; border-radius: var(--rs); border: 1px solid transparent; transition: all 0.15s; }
+        .nav-links a:hover { color: var(--tp); }
+        .nav-links .btn-nav-p { background: var(--accent); color: #fff; border-color: var(--accent); }
+        .nav-links .btn-nav-p:hover { background: #2563eb; }
+        .nav-links .btn-nav-o { border-color: var(--border-md); color: var(--tp); }
+        .nav-links .btn-nav-o:hover { background: rgba(255,255,255,0.05); }
 
-        <!-- Fonts -->
-        <link rel="preconnect" href="https://fonts.bunny.net">
-        <link href="https://fonts.bunny.net/css?family=figtree:400,600&display=swap" rel="stylesheet" />
+        /* LAYOUT */
+        .wrap { position: relative; z-index: 1; max-width: 1100px; margin: 0 auto; padding: 0 2rem; }
+        section { padding: 5rem 0; border-top: 1px solid var(--border); }
+        .sec-label { font-size: 11px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--tm); margin-bottom: 0.6rem; }
+        .sec-title { font-family: var(--font-d); font-size: clamp(1.7rem, 3vw, 2.2rem); font-weight: 400; letter-spacing: -0.025em; color: var(--tp); margin-bottom: 0.5rem; }
+        .sec-sub { font-size: 15px; color: var(--ts); max-width: 52ch; margin-bottom: 2.5rem; line-height: 1.7; }
 
-        <!-- Styles -->
-        <style>
-            /* ! tailwindcss v3.2.4 | MIT License | https://tailwindcss.com */*,::after,::before{box-sizing:border-box;border-width:0;border-style:solid;border-color:#e5e7eb}::after,::before{--tw-content:''}html{line-height:1.5;-webkit-text-size-adjust:100%;-moz-tab-size:4;tab-size:4;font-family:Figtree, sans-serif;font-feature-settings:normal}body{margin:0;line-height:inherit}hr{height:0;color:inherit;border-top-width:1px}abbr:where([title]){-webkit-text-decoration:underline dotted;text-decoration:underline dotted}h1,h2,h3,h4,h5,h6{font-size:inherit;font-weight:inherit}a{color:inherit;text-decoration:inherit}b,strong{font-weight:bolder}code,kbd,pre,samp{font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;font-size:1em}small{font-size:80%}sub,sup{font-size:75%;line-height:0;position:relative;vertical-align:baseline}sub{bottom:-.25em}sup{top:-.5em}table{text-indent:0;border-color:inherit;border-collapse:collapse}button,input,optgroup,select,textarea{font-family:inherit;font-size:100%;font-weight:inherit;line-height:inherit;color:inherit;margin:0;padding:0}button,select{text-transform:none}[type=button],[type=reset],[type=submit],button{-webkit-appearance:button;background-color:transparent;background-image:none}:-moz-focusring{outline:auto}:-moz-ui-invalid{box-shadow:none}progress{vertical-align:baseline}::-webkit-inner-spin-button,::-webkit-outer-spin-button{height:auto}[type=search]{-webkit-appearance:textfield;outline-offset:-2px}::-webkit-search-decoration{-webkit-appearance:none}::-webkit-file-upload-button{-webkit-appearance:button;font:inherit}summary{display:list-item}blockquote,dd,dl,figure,h1,h2,h3,h4,h5,h6,hr,p,pre{margin:0}fieldset{margin:0;padding:0}legend{padding:0}menu,ol,ul{list-style:none;margin:0;padding:0}textarea{resize:vertical}input::placeholder,textarea::placeholder{opacity:1;color:#9ca3af}[role=button],button{cursor:pointer}:disabled{cursor:default}audio,canvas,embed,iframe,img,object,svg,video{display:block;vertical-align:middle}img,video{max-width:100%;height:auto}[hidden]{display:none}*, ::before, ::after{--tw-border-spacing-x:0;--tw-border-spacing-y:0;--tw-translate-x:0;--tw-translate-y:0;--tw-rotate:0;--tw-skew-x:0;--tw-skew-y:0;--tw-scale-x:1;--tw-scale-y:1;--tw-pan-x: ;--tw-pan-y: ;--tw-pinch-zoom: ;--tw-scroll-snap-strictness:proximity;--tw-ordinal: ;--tw-slashed-zero: ;--tw-numeric-figure: ;--tw-numeric-spacing: ;--tw-numeric-fraction: ;--tw-ring-inset: ;--tw-ring-offset-width:0px;--tw-ring-offset-color:#fff;--tw-ring-color:rgb(59 130 246 / 0.5);--tw-ring-offset-shadow:0 0 #0000;--tw-ring-shadow:0 0 #0000;--tw-shadow:0 0 #0000;--tw-shadow-colored:0 0 #0000;--tw-blur: ;--tw-brightness: ;--tw-contrast: ;--tw-grayscale: ;--tw-hue-rotate: ;--tw-invert: ;--tw-saturate: ;--tw-sepia: ;--tw-drop-shadow: ;--tw-backdrop-blur: ;--tw-backdrop-brightness: ;--tw-backdrop-contrast: ;--tw-backdrop-grayscale: ;--tw-backdrop-hue-rotate: ;--tw-backdrop-invert: ;--tw-backdrop-opacity: ;--tw-backdrop-saturate: ;--tw-backdrop-sepia: }::-webkit-backdrop{--tw-border-spacing-x:0;--tw-border-spacing-y:0;--tw-translate-x:0;--tw-translate-y:0;--tw-rotate:0;--tw-skew-x:0;--tw-skew-y:0;--tw-scale-x:1;--tw-scale-y:1;--tw-pan-x: ;--tw-pan-y: ;--tw-pinch-zoom: ;--tw-scroll-snap-strictness:proximity;--tw-ordinal: ;--tw-slashed-zero: ;--tw-numeric-figure: ;--tw-numeric-spacing: ;--tw-numeric-fraction: ;--tw-ring-inset: ;--tw-ring-offset-width:0px;--tw-ring-offset-color:#fff;--tw-ring-color:rgb(59 130 246 / 0.5);--tw-ring-offset-shadow:0 0 #0000;--tw-ring-shadow:0 0 #0000;--tw-shadow:0 0 #0000;--tw-shadow-colored:0 0 #0000;--tw-blur: ;--tw-brightness: ;--tw-contrast: ;--tw-grayscale: ;--tw-hue-rotate: ;--tw-invert: ;--tw-saturate: ;--tw-sepia: ;--tw-drop-shadow: ;--tw-backdrop-blur: ;--tw-backdrop-brightness: ;--tw-backdrop-contrast: ;--tw-backdrop-grayscale: ;--tw-backdrop-hue-rotate: ;--tw-backdrop-invert: ;--tw-backdrop-opacity: ;--tw-backdrop-saturate: ;--tw-backdrop-sepia: }::backdrop{--tw-border-spacing-x:0;--tw-border-spacing-y:0;--tw-translate-x:0;--tw-translate-y:0;--tw-rotate:0;--tw-skew-x:0;--tw-skew-y:0;--tw-scale-x:1;--tw-scale-y:1;--tw-pan-x: ;--tw-pan-y: ;--tw-pinch-zoom: ;--tw-scroll-snap-strictness:proximity;--tw-ordinal: ;--tw-slashed-zero: ;--tw-numeric-figure: ;--tw-numeric-spacing: ;--tw-numeric-fraction: ;--tw-ring-inset: ;--tw-ring-offset-width:0px;--tw-ring-offset-color:#fff;--tw-ring-color:rgb(59 130 246 / 0.5);--tw-ring-offset-shadow:0 0 #0000;--tw-ring-shadow:0 0 #0000;--tw-shadow:0 0 #0000;--tw-shadow-colored:0 0 #0000;--tw-blur: ;--tw-brightness: ;--tw-contrast: ;--tw-grayscale: ;--tw-hue-rotate: ;--tw-invert: ;--tw-saturate: ;--tw-sepia: ;--tw-drop-shadow: ;--tw-backdrop-blur: ;--tw-backdrop-brightness: ;--tw-backdrop-contrast: ;--tw-backdrop-grayscale: ;--tw-backdrop-hue-rotate: ;--tw-backdrop-invert: ;--tw-backdrop-opacity: ;--tw-backdrop-saturate: ;--tw-backdrop-sepia: }.relative{position:relative}.mx-auto{margin-left:auto;margin-right:auto}.mx-6{margin-left:1.5rem;margin-right:1.5rem}.ml-4{margin-left:1rem}.mt-16{margin-top:4rem}.mt-6{margin-top:1.5rem}.mt-4{margin-top:1rem}.-mt-px{margin-top:-1px}.mr-1{margin-right:0.25rem}.flex{display:flex}.inline-flex{display:inline-flex}.grid{display:grid}.h-16{height:4rem}.h-7{height:1.75rem}.h-6{height:1.5rem}.h-5{height:1.25rem}.min-h-screen{min-height:100vh}.w-auto{width:auto}.w-16{width:4rem}.w-7{width:1.75rem}.w-6{width:1.5rem}.w-5{width:1.25rem}.max-w-7xl{max-width:80rem}.shrink-0{flex-shrink:0}.scale-100{--tw-scale-x:1;--tw-scale-y:1;transform:translate(var(--tw-translate-x), var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y))}.grid-cols-1{grid-template-columns:repeat(1, minmax(0, 1fr))}.items-center{align-items:center}.justify-center{justify-content:center}.gap-6{gap:1.5rem}.gap-4{gap:1rem}.self-center{align-self:center}.rounded-lg{border-radius:0.5rem}.rounded-full{border-radius:9999px}.bg-gray-100{--tw-bg-opacity:1;background-color:rgb(243 244 246 / var(--tw-bg-opacity))}.bg-white{--tw-bg-opacity:1;background-color:rgb(255 255 255 / var(--tw-bg-opacity))}.bg-red-50{--tw-bg-opacity:1;background-color:rgb(254 242 242 / var(--tw-bg-opacity))}.bg-dots-darker{background-image:url("data:image/svg+xml,%3Csvg width='30' height='30' viewBox='0 0 30 30' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1.22676 0C1.91374 0 2.45351 0.539773 2.45351 1.22676C2.45351 1.91374 1.91374 2.45351 1.22676 2.45351C0.539773 2.45351 0 1.91374 0 1.22676C0 0.539773 0.539773 0 1.22676 0Z' fill='rgba(0,0,0,0.07)'/%3E%3C/svg%3E")}.from-gray-700\/50{--tw-gradient-from:rgb(55 65 81 / 0.5);--tw-gradient-to:rgb(55 65 81 / 0);--tw-gradient-stops:var(--tw-gradient-from), var(--tw-gradient-to)}.via-transparent{--tw-gradient-to:rgb(0 0 0 / 0);--tw-gradient-stops:var(--tw-gradient-from), transparent, var(--tw-gradient-to)}.bg-center{background-position:center}.stroke-red-500{stroke:#ef4444}.stroke-gray-400{stroke:#9ca3af}.p-6{padding:1.5rem}.px-6{padding-left:1.5rem;padding-right:1.5rem}.text-center{text-align:center}.text-right{text-align:right}.text-xl{font-size:1.25rem;line-height:1.75rem}.text-sm{font-size:0.875rem;line-height:1.25rem}.font-semibold{font-weight:600}.leading-relaxed{line-height:1.625}.text-gray-600{--tw-text-opacity:1;color:rgb(75 85 99 / var(--tw-text-opacity))}.text-gray-900{--tw-text-opacity:1;color:rgb(17 24 39 / var(--tw-text-opacity))}.text-gray-500{--tw-text-opacity:1;color:rgb(107 114 128 / var(--tw-text-opacity))}.underline{-webkit-text-decoration-line:underline;text-decoration-line:underline}.antialiased{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}.shadow-2xl{--tw-shadow:0 25px 50px -12px rgb(0 0 0 / 0.25);--tw-shadow-colored:0 25px 50px -12px var(--tw-shadow-color);box-shadow:var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow)}.shadow-gray-500\/20{--tw-shadow-color:rgb(107 114 128 / 0.2);--tw-shadow:var(--tw-shadow-colored)}.transition-all{transition-property:all;transition-timing-function:cubic-bezier(0.4, 0, 0.2, 1);transition-duration:150ms}.selection\:bg-red-500 *::selection{--tw-bg-opacity:1;background-color:rgb(239 68 68 / var(--tw-bg-opacity))}.selection\:text-white *::selection{--tw-text-opacity:1;color:rgb(255 255 255 / var(--tw-text-opacity))}.selection\:bg-red-500::selection{--tw-bg-opacity:1;background-color:rgb(239 68 68 / var(--tw-bg-opacity))}.selection\:text-white::selection{--tw-text-opacity:1;color:rgb(255 255 255 / var(--tw-text-opacity))}.hover\:text-gray-900:hover{--tw-text-opacity:1;color:rgb(17 24 39 / var(--tw-text-opacity))}.hover\:text-gray-700:hover{--tw-text-opacity:1;color:rgb(55 65 81 / var(--tw-text-opacity))}.focus\:rounded-sm:focus{border-radius:0.125rem}.focus\:outline:focus{outline-style:solid}.focus\:outline-2:focus{outline-width:2px}.focus\:outline-red-500:focus{outline-color:#ef4444}.group:hover .group-hover\:stroke-gray-600{stroke:#4b5563}.z-10{z-index: 10}@media (prefers-reduced-motion: no-preference){.motion-safe\:hover\:scale-\[1\.01\]:hover{--tw-scale-x:1.01;--tw-scale-y:1.01;transform:translate(var(--tw-translate-x), var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y))}}@media (prefers-color-scheme: dark){.dark\:bg-gray-900{--tw-bg-opacity:1;background-color:rgb(17 24 39 / var(--tw-bg-opacity))}.dark\:bg-gray-800\/50{background-color:rgb(31 41 55 / 0.5)}.dark\:bg-red-800\/20{background-color:rgb(153 27 27 / 0.2)}.dark\:bg-dots-lighter{background-image:url("data:image/svg+xml,%3Csvg width='30' height='30' viewBox='0 0 30 30' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1.22676 0C1.91374 0 2.45351 0.539773 2.45351 1.22676C2.45351 1.91374 1.91374 2.45351 1.22676 2.45351C0.539773 2.45351 0 1.91374 0 1.22676C0 0.539773 0.539773 0 1.22676 0Z' fill='rgba(255,255,255,0.07)'/%3E%3C/svg%3E")}.dark\:bg-gradient-to-bl{background-image:linear-gradient(to bottom left, var(--tw-gradient-stops))}.dark\:stroke-gray-600{stroke:#4b5563}.dark\:text-gray-400{--tw-text-opacity:1;color:rgb(156 163 175 / var(--tw-text-opacity))}.dark\:text-white{--tw-text-opacity:1;color:rgb(255 255 255 / var(--tw-text-opacity))}.dark\:shadow-none{--tw-shadow:0 0 #0000;--tw-shadow-colored:0 0 #0000;box-shadow:var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow)}.dark\:ring-1{--tw-ring-offset-shadow:var(--tw-ring-inset) 0 0 0 var(--tw-ring-offset-width) var(--tw-ring-offset-color);--tw-ring-shadow:var(--tw-ring-inset) 0 0 0 calc(1px + var(--tw-ring-offset-width)) var(--tw-ring-color);box-shadow:var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow, 0 0 #0000)}.dark\:ring-inset{--tw-ring-inset:inset}.dark\:ring-white\/5{--tw-ring-color:rgb(255 255 255 / 0.05)}.dark\:hover\:text-white:hover{--tw-text-opacity:1;color:rgb(255 255 255 / var(--tw-text-opacity))}.group:hover .dark\:group-hover\:stroke-gray-400{stroke:#9ca3af}}@media (min-width: 640px){.sm\:fixed{position:fixed}.sm\:top-0{top:0px}.sm\:right-0{right:0px}.sm\:ml-0{margin-left:0px}.sm\:flex{display:flex}.sm\:items-center{align-items:center}.sm\:justify-center{justify-content:center}.sm\:justify-between{justify-content:space-between}.sm\:text-left{text-align:left}.sm\:text-right{text-align:right}}@media (min-width: 768px){.md\:grid-cols-2{grid-template-columns:repeat(2, minmax(0, 1fr))}}@media (min-width: 1024px){.lg\:gap-8{gap:2rem}.lg\:p-8{padding:2rem}}
-        </style>
-    </head>
-    <body class="antialiased">
-        <div class="relative sm:flex sm:justify-center sm:items-center min-h-screen bg-dots-darker bg-center bg-gray-100 dark:bg-dots-lighter dark:bg-gray-900 selection:bg-red-500 selection:text-white">
-            @if (Route::has('login'))
-                <div class="sm:fixed sm:top-0 sm:right-0 p-6 text-right z-10">
-                    @auth
-                        <a href="{{ url('/home') }}" class="font-semibold text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white focus:outline focus:outline-2 focus:rounded-sm focus:outline-red-500">Home</a>
-                    @else
-                        <a href="{{ route('login') }}" class="font-semibold text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white focus:outline focus:outline-2 focus:rounded-sm focus:outline-red-500">Log in</a>
+        /* HERO */
+        .hero { padding: 140px 0 80px; display: grid; grid-template-columns: 1.1fr 0.9fr; gap: 3.5rem; align-items: center; border: none; }
+        .hero-badge { display: inline-flex; align-items: center; gap: 7px; font-size: 12px; font-weight: 500; letter-spacing: 0.05em; color: var(--green); background: var(--green-dim); border: 1px solid rgba(16,185,129,0.22); padding: 4px 12px; border-radius: 100px; margin-bottom: 1.5rem; }
+        .hero-badge-dot { width: 6px; height: 6px; background: var(--green); border-radius: 50%; animation: pulse-dot 2s infinite; }
+        @keyframes pulse-dot { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.5;transform:scale(0.8)} }
+        h1 { font-family: var(--font-d); font-size: clamp(2.3rem, 4.5vw, 3.4rem); font-weight: 400; line-height: 1.12; letter-spacing: -0.03em; color: var(--tp); margin-bottom: 1.25rem; }
+        h1 em { font-style: italic; color: var(--accent); }
+        .hero-desc { font-size: 16px; color: var(--ts); line-height: 1.75; max-width: 46ch; margin-bottom: 2rem; }
+        .hero-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+        .btn { display: inline-flex; align-items: center; gap: 7px; padding: 10px 22px; border-radius: var(--rs); font-size: 14px; font-weight: 500; text-decoration: none; border: 1px solid transparent; transition: all 0.15s; cursor: pointer; font-family: var(--font-b); }
+        .btn-p { background: var(--accent); color: #fff; border-color: var(--accent); }
+        .btn-p:hover { background: #2563eb; }
+        .btn-g { background: transparent; color: var(--ts); border-color: var(--border-md); }
+        .btn-g:hover { background: rgba(255,255,255,0.05); color: var(--tp); }
+        .hero-trust { display: flex; gap: 1.5rem; margin-top: 1.75rem; flex-wrap: wrap; }
+        .trust-item { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--tm); }
+        .trust-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--green); }
 
-                        @if (Route::has('register'))
-                            <a href="{{ route('register') }}" class="ml-4 font-semibold text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white focus:outline focus:outline-2 focus:rounded-sm focus:outline-red-500">Register</a>
-                        @endif
-                    @endauth
+        /* HERO CARD */
+        .hero-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--r); overflow: hidden; }
+        .hero-card-header { display: flex; align-items: center; gap: 8px; padding: 12px 16px; border-bottom: 1px solid var(--border); background: rgba(255,255,255,0.02); }
+        .win-dot { width: 10px; height: 10px; border-radius: 50%; }
+        .hero-card-title { font-size: 12px; font-weight: 500; color: var(--tm); margin-left: 4px; }
+        .hero-card-body { padding: 16px; }
+        .batch-row { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: var(--rs); margin-bottom: 6px; font-size: 13px; transition: opacity 0.4s; }
+        .batch-row.expiring { background: rgba(245,158,11,0.08); border: 1px solid rgba(245,158,11,0.15); }
+        .batch-row.fresh { background: rgba(16,185,129,0.05); border: 1px solid var(--border); }
+        .batch-tag { font-size: 10px; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; padding: 2px 7px; border-radius: 100px; }
+        .tag-warn { background: var(--amber-dim); color: var(--amber); }
+        .tag-ok { background: var(--green-dim); color: var(--green); }
+        .batch-name { flex: 1; color: var(--ts); }
+        .batch-qty { font-weight: 500; color: var(--tp); }
+        .fefo-arrow { text-align: center; padding: 6px 0; font-size: 11px; color: var(--tm); letter-spacing: 0.06em; text-transform: uppercase; }
+
+        /* STATS */
+        .stats-bar { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px; background: var(--border); border: 1px solid var(--border); border-radius: var(--r); overflow: hidden; margin-bottom: 5rem; }
+        .stat-cell { background: var(--bg-card); padding: 1.75rem 1.5rem; text-align: center; }
+        .stat-num { font-family: var(--font-d); font-size: 2.2rem; font-weight: 400; color: var(--tp); letter-spacing: -0.03em; }
+        .stat-label { font-size: 12px; color: var(--tm); margin-top: 4px; text-transform: uppercase; letter-spacing: 0.06em; }
+
+        /* WORKFLOW */
+        .workflow-container { display: grid; grid-template-columns: 1fr 1.3fr; gap: 3rem; align-items: start; }
+        .workflow-steps { display: flex; flex-direction: column; }
+        .wstep { display: flex; gap: 16px; padding: 14px 12px; border-radius: var(--r); cursor: pointer; border: 1px solid transparent; transition: background 0.2s; }
+        .wstep:hover { background: rgba(255,255,255,0.03); }
+        .wstep.active { background: var(--bg-card); border-color: var(--border); }
+        .wstep-connector { width: 1px; height: 10px; background: var(--border); margin-left: 26px; }
+        .wstep-num { width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 600; flex-shrink: 0; margin-top: 2px; background: var(--border); color: var(--tm); transition: all 0.2s; }
+        .wstep.active .wstep-num { background: var(--accent); color: #fff; }
+        .wstep-content { flex: 1; }
+        .wstep-title { font-size: 14px; font-weight: 500; color: var(--ts); margin-bottom: 2px; transition: color 0.2s; }
+        .wstep.active .wstep-title { color: var(--tp); }
+        .wstep-desc { font-size: 13px; color: var(--tm); line-height: 1.55; display: none; }
+        .wstep.active .wstep-desc { display: block; color: var(--ts); }
+        .wpreview-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--r); overflow: hidden; min-height: 360px; }
+        .wpreview-header { padding: 12px 16px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+        .wpreview-title { font-size: 13px; font-weight: 500; color: var(--ts); }
+        .wpreview-status { font-size: 11px; font-weight: 600; padding: 3px 9px; border-radius: 100px; }
+        .status-pending { background: var(--amber-dim); color: var(--amber); }
+        .status-approved { background: var(--green-dim); color: var(--green); }
+        .status-fulfilled { background: var(--accent-dim); color: var(--accent); }
+        .status-sold { background: var(--purple-dim); color: var(--purple); }
+        .wpreview-body { padding: 16px; }
+        .preview-panel { display: none; }
+        .preview-panel.active { display: block; animation: fadeUp 0.25s ease; }
+        @keyframes fadeUp { from{opacity:0;transform:translateY(6px)} to{opacity:1;transform:translateY(0)} }
+        .pf-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.07em; color: var(--tm); margin-bottom: 4px; }
+        .pf-value { font-size: 14px; color: var(--tp); font-weight: 500; }
+        .pf-sub { font-size: 12px; color: var(--ts); margin-top: 2px; }
+        .preview-field { margin-bottom: 12px; }
+        .preview-divider { border: none; border-top: 1px solid var(--border); margin: 12px 0; }
+        .preview-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+        .preview-table th { font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--tm); padding: 0 0 8px; text-align: left; font-weight: 500; }
+        .preview-table td { padding: 7px 0; border-top: 1px solid var(--border); color: var(--ts); }
+        .preview-table td:last-child { text-align: right; color: var(--tp); font-weight: 500; }
+        .progress-bar-wrap { background: rgba(255,255,255,0.06); border-radius: 4px; height: 6px; overflow: hidden; margin-top: 6px; }
+        .progress-bar-fill { height: 100%; border-radius: 4px; background: var(--accent); transition: width 0.6s ease; }
+
+        /* ROLE SWITCHER */
+        .role-switcher { display: grid; grid-template-columns: 220px 1fr; gap: 2rem; align-items: start; }
+        .role-tabs { display: flex; flex-direction: column; gap: 6px; }
+        .rtab { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: var(--r); cursor: pointer; border: 1px solid transparent; transition: all 0.18s; }
+        .rtab:hover { background: rgba(255,255,255,0.03); }
+        .rtab.active { background: var(--bg-card); border-color: var(--border); }
+        .rtab-icon { width: 32px; height: 32px; border-radius: var(--rs); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+        .rtab-name { font-size: 14px; font-weight: 500; color: var(--ts); transition: color 0.18s; }
+        .rtab.active .rtab-name { color: var(--tp); }
+        .rtab-sub { font-size: 11px; color: var(--tm); }
+        .role-dashboard { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--r); overflow: hidden; }
+        .rd-topbar { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; border-bottom: 1px solid var(--border); background: rgba(255,255,255,0.02); }
+        .rd-topbar-title { font-size: 13px; font-weight: 500; color: var(--ts); }
+        .rd-topbar-role { font-size: 11px; font-weight: 600; padding: 3px 9px; border-radius: 100px; }
+        .rd-content { padding: 16px; }
+        .role-panel { display: none; animation: fadeUp 0.22s ease; }
+        .role-panel.active { display: block; }
+        .rd-table-title { font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--tm); margin-bottom: 10px; }
+
+        /* TOOL ACCORDION */
+        .tool-accordion { display: flex; flex-direction: column; border-radius: var(--rs); overflow: hidden; border: 1px solid var(--border); }
+        .tool-item {}
+        .tool-trigger { width: 100%; background: rgba(255,255,255,0.02); border: none; border-top: 1px solid var(--border); padding: 10px 14px; display: flex; align-items: center; justify-content: space-between; cursor: pointer; text-align: left; transition: background 0.15s; gap: 10px; }
+        .tool-item:first-child .tool-trigger { border-top: none; }
+        .tool-trigger:hover { background: rgba(255,255,255,0.05); }
+        .tool-trigger.open { background: rgba(255,255,255,0.04); }
+        .tool-trigger-name { font-size: 13px; font-weight: 500; color: var(--tp); }
+        .tool-chevron { flex-shrink: 0; width: 16px; height: 16px; stroke: var(--tm); fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; transition: transform 0.2s; }
+        .tool-trigger.open .tool-chevron { transform: rotate(180deg); }
+        .tool-body { display: none; padding: 10px 14px 13px; border-top: 1px solid var(--border); background: rgba(255,255,255,0.015); font-size: 13px; color: var(--ts); line-height: 1.6; }
+        .tool-body.open { display: block; animation: fadeUp 0.18s ease; }
+
+        /* SIMULATOR */
+        .sim-grid { display: grid; grid-template-columns: 1fr 1.2fr; gap: 2.5rem; align-items: start; }
+        .sim-controls { display: flex; flex-direction: column; gap: 16px; }
+        .sim-control-label { font-size: 12px; font-weight: 500; color: var(--ts); margin-bottom: 6px; }
+        .sim-slider-row { display: flex; align-items: center; gap: 12px; }
+        .sim-slider-row input[type=range] { flex: 1; -webkit-appearance: none; appearance: none; height: 4px; background: rgba(255,255,255,0.1); border-radius: 2px; outline: none; }
+        .sim-slider-row input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 16px; height: 16px; border-radius: 50%; background: var(--accent); cursor: pointer; border: 2px solid var(--bg); }
+        .sim-val { font-size: 14px; font-weight: 500; color: var(--tp); min-width: 36px; text-align: right; }
+        .sim-result { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--r); padding: 1.5rem; }
+        .sim-headline { font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--tm); margin-bottom: 12px; }
+        .sim-stock-bar { margin-bottom: 12px; }
+        .sim-bar-label { display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 5px; }
+        .sim-bar-name { color: var(--ts); }
+        .sim-bar-qty { font-weight: 500; color: var(--tp); }
+        .sim-bar-track { background: rgba(255,255,255,0.07); border-radius: 3px; height: 8px; overflow: hidden; }
+        .sim-bar-fill { height: 100%; border-radius: 3px; transition: width 0.45s ease; }
+        .sim-msg { border-radius: var(--rs); padding: 10px 12px; font-size: 13px; display: none; margin-top: 12px; }
+        .sim-msg.visible { display: block; }
+        .sim-warn { background: var(--amber-dim); border: 1px solid rgba(245,158,11,0.2); color: var(--amber); }
+        .sim-ok { background: var(--green-dim); border: 1px solid rgba(16,185,129,0.2); color: var(--green); }
+
+        /* FEATURES */
+        .feat-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; background: var(--border); border: 1px solid var(--border); border-radius: var(--r); overflow: hidden; }
+        .feat-cell { background: var(--bg-card); padding: 1.5rem; transition: background 0.15s; }
+        .feat-cell:hover { background: var(--bg-card-alt); }
+        .feat-icon { width: 36px; height: 36px; border-radius: var(--rs); display: flex; align-items: center; justify-content: center; margin-bottom: 1rem; }
+        .feat-cell h3 { font-size: 14px; font-weight: 500; color: var(--tp); margin-bottom: 5px; }
+        .feat-cell p { font-size: 13px; color: var(--ts); line-height: 1.55; }
+
+        /* SEAT CARDS */
+        .seat-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; }
+        .seat-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--r); padding: 1.5rem; transition: border-color 0.2s, transform 0.2s; }
+        .seat-card:hover { border-color: var(--border-md); transform: translateY(-2px); }
+        .seat-card h3 { font-size: 15px; font-weight: 500; color: var(--tp); margin-bottom: 4px; }
+        .seat-desc { font-size: 12px; color: var(--tm); padding-bottom: 1rem; margin-bottom: 1rem; border-bottom: 1px solid var(--border); }
+        .seat-feat { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--ts); padding: 3px 0; }
+        .seat-feat::before { content: ''; width: 4px; height: 4px; background: var(--tm); border-radius: 50%; flex-shrink: 0; }
+
+        footer { border-top: 1px solid var(--border); padding: 2.5rem 0; text-align: center; font-size: 13px; color: var(--tm); position: relative; z-index: 1; }
+
+        .fade-in { opacity: 0; transform: translateY(22px); transition: opacity 0.55s ease, transform 0.55s ease; }
+        .fade-in.visible { opacity: 1; transform: translateY(0); }
+
+        svg.icon { width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+        @media (max-width: 800px) {
+            nav { padding: 0 1.25rem; }
+            .wrap { padding: 0 1.25rem; }
+            .hero { grid-template-columns: 1fr; padding: 110px 0 60px; }
+            .stats-bar { grid-template-columns: repeat(2, 1fr); }
+            .workflow-container, .role-switcher, .sim-grid { grid-template-columns: 1fr; }
+            .feat-grid { grid-template-columns: 1fr 1fr; }
+            .seat-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+
+<nav>
+    <a href="/" class="nav-brand">Doseas <span class="pill-badge">v1</span></a>
+    <div class="nav-links">
+        @if (Route::has('login'))
+            @auth
+                <a href="{{ url('/home') }}">Dashboard</a>
+            @else
+                <a href="{{ route('public.kiosk-order') }}" class="btn-nav-o">Open Kiosk</a>
+                <a href="{{ route('login') }}" class="btn-nav-p">Log in</a>
+            @endauth
+        @endif
+    </div>
+</nav>
+
+<div class="wrap">
+
+    <div class="hero">
+        <div>
+            <div class="hero-badge"><span class="hero-badge-dot"></span> Inventory-safe · FEFO-compliant</div>
+            <h1>Pharmacy ops that<br><em>never oversell.</em></h1>
+            <p class="hero-desc">Role-based workflows for inventory batches, purchase orders, FEFO stock releases, POS sales, and an immutable audit trail — all in one system.</p>
+            <div class="hero-actions">
+                <a href="{{ route('login') }}" class="btn btn-p">
+                    <svg class="icon" viewBox="0 0 24 24"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
+                    Log in to dashboard
+                </a>
+                <a href="{{ route('public.kiosk-order') }}" class="btn btn-g">Open Kiosk -></a>
+            </div>
+            <div class="hero-trust">
+                <span class="trust-item"><span class="trust-dot"></span> Stock never goes negative</span>
+                <span class="trust-item"><span class="trust-dot"></span> FEFO auto-fulfillment</span>
+                <span class="trust-item"><span class="trust-dot"></span> Immutable audit trail</span>
+            </div>
+        </div>
+        <div class="hero-card">
+            <div class="hero-card-header">
+                <span class="win-dot" style="background:#f87171"></span>
+                <span class="win-dot" style="background:#fbbf24"></span>
+                <span class="win-dot" style="background:#34d399"></span>
+                <span class="hero-card-title">Batch inventory — Amoxicillin 500mg</span>
+            </div>
+            <div class="hero-card-body">
+                <div class="fefo-arrow">↓ FEFO fulfillment order</div>
+                <div class="batch-row expiring" id="b1">
+                    <span class="batch-tag tag-warn">Exp soon</span>
+                    <span class="batch-name">Batch #A-0041</span>
+                    <span class="batch-qty">120 units</span>
                 </div>
-            @endif
-
-            <div class="max-w-7xl mx-auto p-6 lg:p-8">
-                <div class="flex justify-center">
-                    <svg viewBox="0 0 62 65" fill="none" xmlns="http://www.w3.org/2000/svg" class="h-16 w-auto bg-gray-100 dark:bg-gray-900">
-                        <path d="M61.8548 14.6253C61.8778 14.7102 61.8895 14.7978 61.8897 14.8858V28.5615C61.8898 28.737 61.8434 28.9095 61.7554 29.0614C61.6675 29.2132 61.5409 29.3392 61.3887 29.4265L49.9104 36.0351V49.1337C49.9104 49.4902 49.7209 49.8192 49.4118 49.9987L25.4519 63.7916C25.3971 63.8227 25.3372 63.8427 25.2774 63.8639C25.255 63.8714 25.2338 63.8851 25.2101 63.8913C25.0426 63.9354 24.8666 63.9354 24.6991 63.8913C24.6716 63.8838 24.6467 63.8689 24.6205 63.8589C24.5657 63.8389 24.5084 63.8215 24.456 63.7916L0.501061 49.9987C0.348882 49.9113 0.222437 49.7853 0.134469 49.6334C0.0465019 49.4816 0.000120578 49.3092 0 49.1337L0 8.10652C0 8.01678 0.0124642 7.92953 0.0348998 7.84477C0.0423783 7.8161 0.0598282 7.78993 0.0697995 7.76126C0.0884958 7.70891 0.105946 7.65531 0.133367 7.6067C0.152063 7.5743 0.179485 7.54812 0.20192 7.51821C0.230588 7.47832 0.256763 7.43719 0.290416 7.40229C0.319084 7.37362 0.356476 7.35243 0.388883 7.32751C0.425029 7.29759 0.457436 7.26518 0.498568 7.2415L12.4779 0.345059C12.6296 0.257786 12.8015 0.211853 12.9765 0.211853C13.1515 0.211853 13.3234 0.257786 13.475 0.345059L25.4531 7.2415H25.4556C25.4955 7.26643 25.5292 7.29759 25.5653 7.32626C25.5977 7.35119 25.6339 7.37362 25.6625 7.40104C25.6974 7.43719 25.7224 7.47832 25.7523 7.51821C25.7735 7.54812 25.8021 7.5743 25.8196 7.6067C25.8483 7.65656 25.8645 7.70891 25.8844 7.76126C25.8944 7.78993 25.9118 7.8161 25.9193 7.84602C25.9423 7.93096 25.954 8.01853 25.9542 8.10652V33.7317L35.9355 27.9844V14.8846C35.9355 14.7973 35.948 14.7088 35.9704 14.6253C35.9792 14.5954 35.9954 14.5692 36.0053 14.5405C36.0253 14.4882 36.0427 14.4346 36.0702 14.386C36.0888 14.3536 36.1163 14.3274 36.1375 14.2975C36.1674 14.2576 36.1923 14.2165 36.2272 14.1816C36.2559 14.1529 36.292 14.1317 36.3244 14.1068C36.3618 14.0769 36.3942 14.0445 36.4341 14.0208L48.4147 7.12434C48.5663 7.03694 48.7383 6.99094 48.9133 6.99094C49.0883 6.99094 49.2602 7.03694 49.4118 7.12434L61.3899 14.0208C61.4323 14.0457 61.4647 14.0769 61.5021 14.1055C61.5333 14.1305 61.5694 14.1529 61.5981 14.1803C61.633 14.2165 61.6579 14.2576 61.6878 14.2975C61.7103 14.3274 61.7377 14.3536 61.7551 14.386C61.7838 14.4346 61.8 14.4882 61.8199 14.5405C61.8312 14.5692 61.8474 14.5954 61.8548 14.6253ZM59.893 27.9844V16.6121L55.7013 19.0252L49.9104 22.3593V33.7317L59.8942 27.9844H59.893ZM47.9149 48.5566V37.1768L42.2187 40.4299L25.953 49.7133V61.2003L47.9149 48.5566ZM1.99677 9.83281V48.5566L23.9562 61.199V49.7145L12.4841 43.2219L12.4804 43.2194L12.4754 43.2169C12.4368 43.1945 12.4044 43.1621 12.3682 43.1347C12.3371 43.1097 12.3009 43.0898 12.2735 43.0624L12.271 43.0586C12.2386 43.0275 12.2162 42.9888 12.1887 42.9539C12.1638 42.9203 12.1339 42.8916 12.114 42.8567L12.1127 42.853C12.0903 42.8156 12.0766 42.7707 12.0604 42.7283C12.0442 42.6909 12.023 42.656 12.013 42.6161C12.0005 42.5688 11.998 42.5177 11.9931 42.4691C11.9881 42.4317 11.9781 42.3943 11.9781 42.3569V15.5801L6.18848 12.2446L1.99677 9.83281ZM12.9777 2.36177L2.99764 8.10652L12.9752 13.8513L22.9541 8.10527L12.9752 2.36177H12.9777ZM18.1678 38.2138L23.9574 34.8809V9.83281L19.7657 12.2459L13.9749 15.5801V40.6281L18.1678 38.2138ZM48.9133 9.14105L38.9344 14.8858L48.9133 20.6305L58.8909 14.8846L48.9133 9.14105ZM47.9149 22.3593L42.124 19.0252L37.9323 16.6121V27.9844L43.7219 31.3174L47.9149 33.7317V22.3593ZM24.9533 47.987L39.59 39.631L46.9065 35.4555L36.9352 29.7145L25.4544 36.3242L14.9907 42.3482L24.9533 47.987Z" fill="#FF2D20"/>
-                    </svg>
+                <div class="batch-row fresh">
+                    <span class="batch-tag tag-ok">Fresh</span>
+                    <span class="batch-name">Batch #A-0052</span>
+                    <span class="batch-qty">300 units</span>
                 </div>
+                <div class="batch-row fresh">
+                    <span class="batch-tag tag-ok">Fresh</span>
+                    <span class="batch-name">Batch #A-0061</span>
+                    <span class="batch-qty">200 units</span>
+                </div>
+                <div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">
+                    <span style="font-size:12px;color:var(--tm)">Total sellable</span>
+                    <span style="font-size:16px;font-weight:500;color:var(--tp)">620 units</span>
+                </div>
+                <div style="margin-top:8px;font-size:12px;color:var(--green);text-align:right">✓ Next sale deducts from Batch #A-0041 first</div>
+            </div>
+        </div>
+    </div>
 
-                <div class="mt-16">
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-8">
-                        <a href="https://laravel.com/docs" class="scale-100 p-6 bg-white dark:bg-gray-800/50 dark:bg-gradient-to-bl from-gray-700/50 via-transparent dark:ring-1 dark:ring-inset dark:ring-white/5 rounded-lg shadow-2xl shadow-gray-500/20 dark:shadow-none flex motion-safe:hover:scale-[1.01] transition-all duration-250 focus:outline focus:outline-2 focus:outline-red-500">
-                            <div>
-                                <div class="h-16 w-16 bg-red-50 dark:bg-red-800/20 flex items-center justify-center rounded-full">
-                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" class="w-7 h-7 stroke-red-500">
-                                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" />
-                                    </svg>
-                                </div>
+    <div class="stats-bar fade-in">
+        <div class="stat-cell"><div class="stat-num" data-target="100" data-suffix="%">0%</div><div class="stat-label">Stock safety</div></div>
+        <div class="stat-cell"><div class="stat-num" data-target="3" data-suffix="">0</div><div class="stat-label">Role tiers</div></div>
+        <div class="stat-cell"><div class="stat-num" data-target="0" data-suffix="%">0%</div><div class="stat-label">Negative stock events</div></div>
+        <div class="stat-cell"><div class="stat-num" data-target="100" data-suffix="%">0%</div><div class="stat-label">Actions audited</div></div>
+    </div>
 
-                                <h2 class="mt-6 text-xl font-semibold text-gray-900 dark:text-white">Documentation</h2>
-
-                                <p class="mt-4 text-gray-500 dark:text-gray-400 text-sm leading-relaxed">
-                                    Laravel has wonderful documentation covering every aspect of the framework. Whether you are a newcomer or have prior experience with Laravel, we recommend reading our documentation from beginning to end.
-                                </p>
-                            </div>
-
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" class="self-center shrink-0 stroke-red-500 w-6 h-6 mx-6">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12h15m0 0l-6.75-6.75M19.5 12l-6.75 6.75" />
-                            </svg>
-                        </a>
-
-                        <a href="https://laracasts.com" class="scale-100 p-6 bg-white dark:bg-gray-800/50 dark:bg-gradient-to-bl from-gray-700/50 via-transparent dark:ring-1 dark:ring-inset dark:ring-white/5 rounded-lg shadow-2xl shadow-gray-500/20 dark:shadow-none flex motion-safe:hover:scale-[1.01] transition-all duration-250 focus:outline focus:outline-2 focus:outline-red-500">
-                            <div>
-                                <div class="h-16 w-16 bg-red-50 dark:bg-red-800/20 flex items-center justify-center rounded-full">
-                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" class="w-7 h-7 stroke-red-500">
-                                        <path stroke-linecap="round" d="M15.75 10.5l4.72-4.72a.75.75 0 011.28.53v11.38a.75.75 0 01-1.28.53l-4.72-4.72M4.5 18.75h9a2.25 2.25 0 002.25-2.25v-9a2.25 2.25 0 00-2.25-2.25h-9A2.25 2.25 0 002.25 7.5v9a2.25 2.25 0 002.25 2.25z" />
-                                    </svg>
-                                </div>
-
-                                <h2 class="mt-6 text-xl font-semibold text-gray-900 dark:text-white">Laracasts</h2>
-
-                                <p class="mt-4 text-gray-500 dark:text-gray-400 text-sm leading-relaxed">
-                                    Laracasts offers thousands of video tutorials on Laravel, PHP, and JavaScript development. Check them out, see for yourself, and massively level up your development skills in the process.
-                                </p>
-                            </div>
-
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" class="self-center shrink-0 stroke-red-500 w-6 h-6 mx-6">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12h15m0 0l-6.75-6.75M19.5 12l-6.75 6.75" />
-                            </svg>
-                        </a>
-
-                        <a href="https://laravel-news.com" class="scale-100 p-6 bg-white dark:bg-gray-800/50 dark:bg-gradient-to-bl from-gray-700/50 via-transparent dark:ring-1 dark:ring-inset dark:ring-white/5 rounded-lg shadow-2xl shadow-gray-500/20 dark:shadow-none flex motion-safe:hover:scale-[1.01] transition-all duration-250 focus:outline focus:outline-2 focus:outline-red-500">
-                            <div>
-                                <div class="h-16 w-16 bg-red-50 dark:bg-red-800/20 flex items-center justify-center rounded-full">
-                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" class="w-7 h-7 stroke-red-500">
-                                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 7.5h1.5m-1.5 3h1.5m-7.5 3h7.5m-7.5 3h7.5m3-9h3.375c.621 0 1.125.504 1.125 1.125V18a2.25 2.25 0 01-2.25 2.25M16.5 7.5V18a2.25 2.25 0 002.25 2.25M16.5 7.5V4.875c0-.621-.504-1.125-1.125-1.125H4.125C3.504 3.75 3 4.254 3 4.875V18a2.25 2.25 0 002.25 2.25h13.5M6 7.5h3v3H6v-3z" />
-                                    </svg>
-                                </div>
-
-                                <h2 class="mt-6 text-xl font-semibold text-gray-900 dark:text-white">Laravel News</h2>
-
-                                <p class="mt-4 text-gray-500 dark:text-gray-400 text-sm leading-relaxed">
-                                    Laravel News is a community driven portal and newsletter aggregating all of the latest and most important news in the Laravel ecosystem, including new package releases and tutorials.
-                                </p>
-                            </div>
-
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" class="self-center shrink-0 stroke-red-500 w-6 h-6 mx-6">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12h15m0 0l-6.75-6.75M19.5 12l-6.75 6.75" />
-                            </svg>
-                        </a>
-
-                        <div class="scale-100 p-6 bg-white dark:bg-gray-800/50 dark:bg-gradient-to-bl from-gray-700/50 via-transparent dark:ring-1 dark:ring-inset dark:ring-white/5 rounded-lg shadow-2xl shadow-gray-500/20 dark:shadow-none flex motion-safe:hover:scale-[1.01] transition-all duration-250 focus:outline focus:outline-2 focus:outline-red-500">
-                            <div>
-                                <div class="h-16 w-16 bg-red-50 dark:bg-red-800/20 flex items-center justify-center rounded-full">
-                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" class="w-7 h-7 stroke-red-500">
-                                        <path stroke-linecap="round" stroke-linejoin="round" d="M6.115 5.19l.319 1.913A6 6 0 008.11 10.36L9.75 12l-.387.775c-.217.433-.132.956.21 1.298l1.348 1.348c.21.21.329.497.329.795v1.089c0 .426.24.815.622 1.006l.153.076c.433.217.956.132 1.298-.21l.723-.723a8.7 8.7 0 002.288-4.042 1.087 1.087 0 00-.358-1.099l-1.33-1.108c-.251-.21-.582-.299-.905-.245l-1.17.195a1.125 1.125 0 01-.98-.314l-.295-.295a1.125 1.125 0 010-1.591l.13-.132a1.125 1.125 0 011.3-.21l.603.302a.809.809 0 001.086-1.086L14.25 7.5l1.256-.837a4.5 4.5 0 001.528-1.732l.146-.292M6.115 5.19A9 9 0 1017.18 4.64M6.115 5.19A8.965 8.965 0 0112 3c1.929 0 3.716.607 5.18 1.64" />
-                                    </svg>
-                                </div>
-
-                                <h2 class="mt-6 text-xl font-semibold text-gray-900 dark:text-white">Vibrant Ecosystem</h2>
-
-                                <p class="mt-4 text-gray-500 dark:text-gray-400 text-sm leading-relaxed">
-                                    Laravel's robust library of first-party tools and libraries, such as <a href="https://forge.laravel.com" class="underline hover:text-gray-700 dark:hover:text-white focus:outline focus:outline-2 focus:rounded-sm focus:outline-red-500">Forge</a>, <a href="https://vapor.laravel.com" class="underline hover:text-gray-700 dark:hover:text-white focus:outline focus:outline-2 focus:rounded-sm focus:outline-red-500">Vapor</a>, <a href="https://nova.laravel.com" class="underline hover:text-gray-700 dark:hover:text-white focus:outline focus:outline-2 focus:rounded-sm focus:outline-red-500">Nova</a>, and <a href="https://envoyer.io" class="underline hover:text-gray-700 dark:hover:text-white focus:outline focus:outline-2 focus:rounded-sm focus:outline-red-500">Envoyer</a> help you take your projects to the next level. Pair them with powerful open source libraries like <a href="https://laravel.com/docs/billing" class="underline hover:text-gray-700 dark:hover:text-white focus:outline focus:outline-2 focus:rounded-sm focus:outline-red-500">Cashier</a>, <a href="https://laravel.com/docs/dusk" class="underline hover:text-gray-700 dark:hover:text-white focus:outline focus:outline-2 focus:rounded-sm focus:outline-red-500">Dusk</a>, <a href="https://laravel.com/docs/broadcasting" class="underline hover:text-gray-700 dark:hover:text-white focus:outline focus:outline-2 focus:rounded-sm focus:outline-red-500">Echo</a>, <a href="https://laravel.com/docs/horizon" class="underline hover:text-gray-700 dark:hover:text-white focus:outline focus:outline-2 focus:rounded-sm focus:outline-red-500">Horizon</a>, <a href="https://laravel.com/docs/sanctum" class="underline hover:text-gray-700 dark:hover:text-white focus:outline focus:outline-2 focus:rounded-sm focus:outline-red-500">Sanctum</a>, <a href="https://laravel.com/docs/telescope" class="underline hover:text-gray-700 dark:hover:text-white focus:outline focus:outline-2 focus:rounded-sm focus:outline-red-500">Telescope</a>, and more.
-                                </p>
-                            </div>
+    <section class="fade-in">
+        <div class="sec-label">How it works</div>
+        <div class="sec-title">From order to dispensing</div>
+        <p class="sec-sub">A complete workflow from purchase order through to patient sale — every step tracked and approved. Click each step to see a preview.</p>
+        <div class="workflow-container">
+            <div class="workflow-steps" id="wsteps">
+                <div class="wstep active" data-step="0">
+                    <div class="wstep-num">1</div>
+                    <div class="wstep-content">
+                        <div class="wstep-title">Staff creates Purchase Order</div>
+                        <div class="wstep-desc">Staff lists required medicines, sets supplier, and submits for admin review.</div>
+                    </div>
+                </div>
+                <div class="wstep-connector"></div>
+                <div class="wstep" data-step="1">
+                    <div class="wstep-num">2</div>
+                    <div class="wstep-content">
+                        <div class="wstep-title">Admin approves the PO</div>
+                        <div class="wstep-desc">Admin reviews line items, confirms budget, and approves or rejects with notes.</div>
+                    </div>
+                </div>
+                <div class="wstep-connector"></div>
+                <div class="wstep" data-step="2">
+                    <div class="wstep-num">3</div>
+                    <div class="wstep-content">
+                        <div class="wstep-title">Receiving creates inventory batches</div>
+                        <div class="wstep-desc">Staff records batch numbers and expiry dates. Stock added to back inventory automatically.</div>
+                    </div>
+                </div>
+                <div class="wstep-connector"></div>
+                <div class="wstep" data-step="3">
+                    <div class="wstep-num">4</div>
+                    <div class="wstep-content">
+                        <div class="wstep-title">Pharmacist requests front stock (FEFO)</div>
+                        <div class="wstep-desc">Stock request pulls from back inventory using First Expired, First Out — oldest batches move to front first.</div>
+                    </div>
+                </div>
+                <div class="wstep-connector"></div>
+                <div class="wstep" data-step="4">
+                    <div class="wstep-num">5</div>
+                    <div class="wstep-content">
+                        <div class="wstep-title">POS sale deducts from front stock</div>
+                        <div class="wstep-desc">Patient record created, prescription optionally linked, payment recorded, stock deducted in real time.</div>
+                    </div>
+                </div>
+            </div>
+            <div>
+                <div class="wpreview-card">
+                    <div class="wpreview-header">
+                        <span class="wpreview-title" id="wp-title">Purchase Order #PO-2041</span>
+                        <span class="wpreview-status status-pending" id="wp-status">Pending</span>
+                    </div>
+                    <div class="wpreview-body">
+                        <div class="preview-panel active" id="panel-0">
+                            <div class="preview-field"><div class="pf-label">Submitted by</div><div class="pf-value">Staff — Maria Santos</div><div class="pf-sub">Today, 9:14 AM</div></div>
+                            <div class="preview-field"><div class="pf-label">Supplier</div><div class="pf-value">MedSource Philippines</div></div>
+                            <hr class="preview-divider">
+                            <table class="preview-table"><thead><tr><th>Medicine</th><th>Qty</th><th>Unit cost</th></tr></thead><tbody>
+                                <tr><td>Amoxicillin 500mg</td><td>500</td><td>₱8.50</td></tr>
+                                <tr><td>Metformin 500mg</td><td>300</td><td>₱5.20</td></tr>
+                                <tr><td>Amlodipine 5mg</td><td>200</td><td>₱7.80</td></tr>
+                            </tbody></table>
+                            <hr class="preview-divider">
+                            <div style="display:flex;justify-content:space-between;font-size:13px"><span style="color:var(--tm)">Total</span><span style="color:var(--tp);font-weight:500">₱9,475.00</span></div>
                         </div>
-                    </div>
-                </div>
-
-                <div class="flex justify-center mt-16 px-0 sm:items-center sm:justify-between">
-                    <div class="text-center text-sm sm:text-left">
-                        &nbsp;
-                    </div>
-
-                    <div class="text-center text-sm text-gray-500 dark:text-gray-400 sm:text-right sm:ml-0">
-                        Laravel v{{ Illuminate\Foundation\Application::VERSION }} (PHP v{{ PHP_VERSION }})
+                        <div class="preview-panel" id="panel-1">
+                            <div class="preview-field"><div class="pf-label">Reviewed by</div><div class="pf-value">Admin — Dr. Reyes</div><div class="pf-sub">Today, 10:02 AM</div></div>
+                            <div class="preview-field"><div class="pf-label">Decision</div><div class="pf-value" style="color:var(--green)">✓ Approved</div></div>
+                            <div class="preview-field"><div class="pf-label">Note</div><div class="pf-value" style="font-weight:400;font-size:13px;color:var(--ts)">All items confirmed in budget. Proceed with delivery.</div></div>
+                            <div class="progress-bar-wrap"><div class="progress-bar-fill" style="width:40%"></div></div>
+                            <div style="font-size:11px;color:var(--tm);margin-top:5px">Step 2 of 5 complete</div>
+                        </div>
+                        <div class="preview-panel" id="panel-2">
+                            <div class="preview-field"><div class="pf-label">Received by</div><div class="pf-value">Staff — Ben Cruz</div><div class="pf-sub">Today, 2:30 PM</div></div>
+                            <hr class="preview-divider">
+                            <table class="preview-table"><thead><tr><th>Batch</th><th>Expiry</th><th>Added</th></tr></thead><tbody>
+                                <tr><td>Amox #A-0061</td><td>Mar 2026</td><td>500</td></tr>
+                                <tr><td>Met #M-0033</td><td>Jan 2026</td><td>300</td></tr>
+                                <tr><td>Aml #C-0019</td><td>Jun 2026</td><td>200</td></tr>
+                            </tbody></table>
+                            <div class="progress-bar-wrap" style="margin-top:12px"><div class="progress-bar-fill" style="width:60%"></div></div>
+                            <div style="font-size:11px;color:var(--tm);margin-top:5px">Step 3 of 5 complete</div>
+                        </div>
+                        <div class="preview-panel" id="panel-3">
+                            <div class="preview-field"><div class="pf-label">Requested by</div><div class="pf-value">Pharmacist — Ana Lim</div><div class="pf-sub">Today, 3:05 PM</div></div>
+                            <div class="preview-field"><div class="pf-label">FEFO strategy</div><div class="pf-value" style="color:var(--accent)">Batch #A-0041 -> front (exp. soonest)</div></div>
+                            <div class="preview-field"><div class="pf-label">Qty moved</div><div class="pf-value">120 units of Amoxicillin</div></div>
+                            <div class="progress-bar-wrap"><div class="progress-bar-fill" style="width:80%"></div></div>
+                            <div style="font-size:11px;color:var(--tm);margin-top:5px">Step 4 of 5 complete</div>
+                        </div>
+                        <div class="preview-panel" id="panel-4">
+                            <div class="preview-field"><div class="pf-label">Patient</div><div class="pf-value">Juan dela Cruz</div><div class="pf-sub">Rx #RX-9901 · Amoxicillin 500mg</div></div>
+                            <div class="preview-field"><div class="pf-label">Dispensed</div><div class="pf-value">21 capsules (7-day course)</div></div>
+                            <div class="preview-field"><div class="pf-label">Payment</div><div class="pf-value" style="color:var(--green)">₱178.50 — Cash</div></div>
+                            <div class="progress-bar-wrap"><div class="progress-bar-fill" style="width:100%;background:var(--green)"></div></div>
+                            <div style="font-size:11px;color:var(--green);margin-top:5px">✓ Workflow complete — trail recorded immutably</div>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
-    </body>
+    </section>
+
+    <section class="fade-in">
+        <div class="sec-label">Role-based access</div>
+        <div class="sec-title">Each role sees their tools</div>
+        <p class="sec-sub">Select a role, then click any tool to see exactly what it does and how to use it.</p>
+        <div class="role-switcher">
+            <div class="role-tabs">
+                <div class="rtab active" data-role="staff">
+                    <div class="rtab-icon" style="background:var(--amber-dim)">
+                        <svg class="icon" style="stroke:var(--amber)" viewBox="0 0 24 24"><path d="M20 7H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2z"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
+                    </div>
+                    <div><div class="rtab-name">Staff</div><div class="rtab-sub">Inventory & POs</div></div>
+                </div>
+                <div class="rtab" data-role="pharmacist">
+                    <div class="rtab-icon" style="background:var(--green-dim)">
+                        <svg class="icon" style="stroke:var(--green)" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                    </div>
+                    <div><div class="rtab-name">Pharmacist</div><div class="rtab-sub">POS & patients</div></div>
+                </div>
+                <div class="rtab" data-role="admin">
+                    <div class="rtab-icon" style="background:var(--accent-dim)">
+                        <svg class="icon" style="stroke:var(--accent)" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/></svg>
+                    </div>
+                    <div><div class="rtab-name">Admin</div><div class="rtab-sub">Governance & audit</div></div>
+                </div>
+            </div>
+
+            <div class="role-dashboard">
+                <div class="rd-topbar">
+                    <span class="rd-topbar-title" id="rd-title">Staff Dashboard</span>
+                    <span class="rd-topbar-role" id="rd-badge" style="background:var(--amber-dim);color:var(--amber)">Staff</span>
+                </div>
+                <div class="rd-content">
+
+                    <!-- STAFF -->
+                    <div class="role-panel active" id="rpanel-staff">
+                        <div class="rd-table-title">Staff tools</div>
+                        <div class="tool-accordion">
+                            <div class="tool-item">
+                                <button class="tool-trigger" onclick="toggleTool(this)">
+                                    <span class="tool-trigger-name">Inventory (Products)</span>
+                                    <svg class="tool-chevron" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+                                </button>
+                                <div class="tool-body">Manage your medicine catalog and batch/expiry details. Go to Products → Create Product, then add batches, quantities, and expiry dates on the product's batches page.</div>
+                            </div>
+                            <div class="tool-item">
+                                <button class="tool-trigger" onclick="toggleTool(this)">
+                                    <span class="tool-trigger-name">Create PO</span>
+                                    <svg class="tool-chevron" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+                                </button>
+                                <div class="tool-body">Submit a purchase order request. Go to Purchase Orders → Create PO, choose a product, enter quantity, unit cost, and expected date, add notes, then submit for admin approval.</div>
+                            </div>
+                            <div class="tool-item">
+                                <button class="tool-trigger" onclick="toggleTool(this)">
+                                    <span class="tool-trigger-name">Purchase Orders</span>
+                                    <svg class="tool-chevron" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+                                </button>
+                                <div class="tool-body">Track PO statuses end-to-end — pending → approved → received. Open each PO from the list to review its items and totals.</div>
+                            </div>
+                            <div class="tool-item">
+                                <button class="tool-trigger" onclick="toggleTool(this)">
+                                    <span class="tool-trigger-name">Incoming Deliveries</span>
+                                    <svg class="tool-chevron" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+                                </button>
+                                <div class="tool-body">Receive approved POs into inventory. Open Incoming Deliveries, pick the approved PO, enter batch number and expiry date, then confirm to create inventory batches and log stock movements.</div>
+                            </div>
+                            <div class="tool-item">
+                                <button class="tool-trigger" onclick="toggleTool(this)">
+                                    <span class="tool-trigger-name">Approve Release</span>
+                                    <svg class="tool-chevron" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+                                </button>
+                                <div class="tool-body">Fulfill stock requests by moving FEFO batches from back inventory to front. Open Stock Requests, review the requested quantity, optionally adjust, then approve to transfer stock and update movements.</div>
+                            </div>
+                            <div class="tool-item">
+                                <button class="tool-trigger" onclick="toggleTool(this)">
+                                    <span class="tool-trigger-name">Inventory Reports</span>
+                                    <svg class="tool-chevron" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+                                </button>
+                                <div class="tool-body">Review current stock health and batch expiry information. Use Reports → Inventory to search, filter, and export a PDF if needed.</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- PHARMACIST -->
+                    <div class="role-panel" id="rpanel-pharmacist">
+                        <div class="rd-table-title">Pharmacist tools</div>
+                        <div class="tool-accordion">
+                            <div class="tool-item">
+                                <button class="tool-trigger" onclick="toggleTool(this)">
+                                    <span class="tool-trigger-name">Quick Release (Sales)</span>
+                                    <svg class="tool-chevron" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+                                </button>
+                                <div class="tool-body">Release medicine at the counter with stock-safe deductions. Go to Sales → New Sale, pick or create the patient, add products, optionally link a prescription, choose payment method, then complete — FEFO deduction happens automatically.</div>
+                            </div>
+                            <div class="tool-item">
+                                <button class="tool-trigger" onclick="toggleTool(this)">
+                                    <span class="tool-trigger-name">POS / Sales</span>
+                                    <svg class="tool-chevron" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+                                </button>
+                                <div class="tool-body">View transactions and receipts. Open the sales list, then click any sale to see full details, line items, and payment records.</div>
+                            </div>
+                            <div class="tool-item">
+                                <button class="tool-trigger" onclick="toggleTool(this)">
+                                    <span class="tool-trigger-name">Patients</span>
+                                    <svg class="tool-chevron" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+                                </button>
+                                <div class="tool-body">Create and manage patient records. Use Patients → Create to add demographics and allergies, then open a patient to view their purchase history and linked prescriptions.</div>
+                            </div>
+                            <div class="tool-item">
+                                <button class="tool-trigger" onclick="toggleTool(this)">
+                                    <span class="tool-trigger-name">Prescriptions</span>
+                                    <svg class="tool-chevron" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+                                </button>
+                                <div class="tool-body">Document prescriptions and link them to dispensing. Use Prescriptions → Create to add items and status, then link during a POS sale when applicable.</div>
+                            </div>
+                            <div class="tool-item">
+                                <button class="tool-trigger" onclick="toggleTool(this)">
+                                    <span class="tool-trigger-name">Prescribers</span>
+                                    <svg class="tool-chevron" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+                                </button>
+                                <div class="tool-body">Maintain the prescribers and doctors list used for prescriptions. Add or edit license and contact info to keep Rx creation consistent.</div>
+                            </div>
+                            <div class="tool-item">
+                                <button class="tool-trigger" onclick="toggleTool(this)">
+                                    <span class="tool-trigger-name">Stock Requests</span>
+                                    <svg class="tool-chevron" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+                                </button>
+                                <div class="tool-body">Request replenishment when front-shop stock is low. Go to Stock Requests → Create New, enter quantity and reason, then submit — staff will fulfill from back inventory using FEFO.</div>
+                            </div>
+                            <div class="tool-item">
+                                <button class="tool-trigger" onclick="toggleTool(this)">
+                                    <span class="tool-trigger-name">Patient Reports</span>
+                                    <svg class="tool-chevron" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+                                </button>
+                                <div class="tool-body">Review a patient's purchase history. Use Reports → Patient Purchases to filter by patient or date range, and export a PDF for records.</div>
+                            </div>
+                            <div class="tool-item">
+                                <button class="tool-trigger" onclick="toggleTool(this)">
+                                    <span class="tool-trigger-name">Kiosk Page</span>
+                                    <svg class="tool-chevron" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+                                </button>
+                                <div class="tool-body">Public self-service kiosk for customers. The patient selects medicines and quantities, picks a payment method, then shows the QR ticket to the pharmacist for scanning and fulfillment.</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ADMIN -->
+                    <div class="role-panel" id="rpanel-admin">
+                        <div class="rd-table-title">Admin tools</div>
+                        <div class="tool-accordion">
+                            <div class="tool-item">
+                                <button class="tool-trigger" onclick="toggleTool(this)">
+                                    <span class="tool-trigger-name">Products</span>
+                                    <svg class="tool-chevron" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+                                </button>
+                                <div class="tool-body">Review the full product catalog and inventory batch setup. Inspect stock status, reorder levels, and batch or expiry details for any medicine.</div>
+                            </div>
+                            <div class="tool-item">
+                                <button class="tool-trigger" onclick="toggleTool(this)">
+                                    <span class="tool-trigger-name">Patients</span>
+                                    <svg class="tool-chevron" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+                                </button>
+                                <div class="tool-body">View patient records and audit-sensitive history when needed. Open any patient profile to check linked prescriptions and purchase history.</div>
+                            </div>
+                            <div class="tool-item">
+                                <button class="tool-trigger" onclick="toggleTool(this)">
+                                    <span class="tool-trigger-name">Purchase Orders</span>
+                                    <svg class="tool-chevron" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+                                </button>
+                                <div class="tool-body">Govern procurement approvals. Review pending POs, inspect line items, then approve or reject with authorization notes.</div>
+                            </div>
+                            <div class="tool-item">
+                                <button class="tool-trigger" onclick="toggleTool(this)">
+                                    <span class="tool-trigger-name">Incoming Deliveries</span>
+                                    <svg class="tool-chevron" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+                                </button>
+                                <div class="tool-body">Monitor the delivery and receiving flow. Review approved and received POs to ensure inventory batches are created correctly with accurate expiry data.</div>
+                            </div>
+                            <div class="tool-item">
+                                <button class="tool-trigger" onclick="toggleTool(this)">
+                                    <span class="tool-trigger-name">Stock Movements</span>
+                                    <svg class="tool-chevron" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+                                </button>
+                                <div class="tool-body">Audit every inventory movement. Inspect incoming, release, and adjustment history — each entry is tied to a reference and cannot be altered.</div>
+                            </div>
+                            <div class="tool-item">
+                                <button class="tool-trigger" onclick="toggleTool(this)">
+                                    <span class="tool-trigger-name">Reports</span>
+                                    <svg class="tool-chevron" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+                                </button>
+                                <div class="tool-body">Run operational views on stock health and expiry status. Use Reports → Inventory and export PDFs for management records.</div>
+                            </div>
+                            <div class="tool-item">
+                                <button class="tool-trigger" onclick="toggleTool(this)">
+                                    <span class="tool-trigger-name">Audit Logs</span>
+                                    <svg class="tool-chevron" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+                                </button>
+                                <div class="tool-body">Compliance and accountability timeline. Search actions — sales, stock changes, overrides — and see exactly who performed them and when.</div>
+                            </div>
+                            <div class="tool-item">
+                                <button class="tool-trigger" onclick="toggleTool(this)">
+                                    <span class="tool-trigger-name">Trash</span>
+                                    <svg class="tool-chevron" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+                                </button>
+                                <div class="tool-body">Manage system trash with admin permission. Review removed items and take recovery or permanent deletion actions safely.</div>
+                            </div>
+                        </div>
+                        <div style="margin-top:12px;font-size:12px;color:var(--tm);">Stock override requires admin PIN verification and is fully audited.</div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="fade-in">
+        <div class="sec-label">Interactive demo</div>
+        <div class="sec-title">See FEFO in action</div>
+        <p class="sec-sub">Adjust batch quantities and sale size to watch FEFO fulfillment work automatically — oldest batches consumed first.</p>
+        <div class="sim-grid">
+            <div class="sim-controls">
+                <div>
+                    <div class="sim-control-label">Batch A — expires in 30 days (oldest)</div>
+                    <div class="sim-slider-row"><input type="range" min="0" max="200" value="80" id="slA" step="1"><span class="sim-val" id="valA">80</span></div>
+                </div>
+                <div>
+                    <div class="sim-control-label">Batch B — expires in 90 days</div>
+                    <div class="sim-slider-row"><input type="range" min="0" max="200" value="150" id="slB" step="1"><span class="sim-val" id="valB">150</span></div>
+                </div>
+                <div>
+                    <div class="sim-control-label">Batch C — expires in 180 days (newest)</div>
+                    <div class="sim-slider-row"><input type="range" min="0" max="200" value="200" id="slC" step="1"><span class="sim-val" id="valC">200</span></div>
+                </div>
+                <div>
+                    <div class="sim-control-label">Sale quantity requested</div>
+                    <div class="sim-slider-row"><input type="range" min="1" max="450" value="100" id="slSale" step="1"><span class="sim-val" id="valSale">100</span></div>
+                </div>
+                <div style="font-size:12px;color:var(--tm);padding-top:4px">
+                    Total available: <span id="sim-total" style="color:var(--ts);font-weight:500">430 units</span>
+                </div>
+            </div>
+            <div class="sim-result">
+                <div class="sim-headline">Fulfillment breakdown</div>
+                <div class="sim-stock-bar">
+                    <div class="sim-bar-label"><span class="sim-bar-name">Batch A (exp. soonest)</span><span class="sim-bar-qty" id="simA-val">—</span></div>
+                    <div class="sim-bar-track"><div class="sim-bar-fill" id="simA-bar" style="width:0%;background:var(--amber)"></div></div>
+                </div>
+                <div class="sim-stock-bar">
+                    <div class="sim-bar-label"><span class="sim-bar-name">Batch B</span><span class="sim-bar-qty" id="simB-val">—</span></div>
+                    <div class="sim-bar-track"><div class="sim-bar-fill" id="simB-bar" style="width:0%;background:var(--accent)"></div></div>
+                </div>
+                <div class="sim-stock-bar">
+                    <div class="sim-bar-label"><span class="sim-bar-name">Batch C (exp. latest)</span><span class="sim-bar-qty" id="simC-val">—</span></div>
+                    <div class="sim-bar-track"><div class="sim-bar-fill" id="simC-bar" style="width:0%;background:var(--green)"></div></div>
+                </div>
+                <div class="sim-msg sim-warn" id="sim-warn">⚠ Insufficient stock — sale cannot proceed</div>
+                <div class="sim-msg sim-ok" id="sim-ok">✓ Sale fulfilled — oldest batches used first</div>
+            </div>
+        </div>
+    </section>
+
+    <section class="fade-in">
+        <div class="sec-label">Platform</div>
+        <div class="sec-title">Everything you need</div>
+        <p class="sec-sub">Built specifically for pharmacy workflows — not a generic inventory tool.</p>
+        <div class="feat-grid">
+            <div class="feat-cell">
+                <div class="feat-icon" style="background:var(--accent-dim)"><svg class="icon" style="stroke:var(--accent)" viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg></div>
+                <h3>Inventory by batch & expiry</h3>
+                <p>Track every batch with expiry dates and sellable stock across front and back inventory.</p>
+            </div>
+            <div class="feat-cell">
+                <div class="feat-icon" style="background:var(--green-dim)"><svg class="icon" style="stroke:var(--green)" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></div>
+                <h3>Purchase Orders (PO)</h3>
+                <p>Create as staff, approve as admin, receive to auto-generate inventory batches with expiry data.</p>
+            </div>
+            <div class="feat-cell">
+                <div class="feat-icon" style="background:var(--amber-dim)"><svg class="icon" style="stroke:var(--amber)" viewBox="0 0 24 24"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg></div>
+                <h3>Stock Requests (FEFO)</h3>
+                <p>Pull from back inventory to front using First Expired, First Out logic — automatically, every time.</p>
+            </div>
+            <div class="feat-cell">
+                <div class="feat-icon" style="background:var(--purple-dim)"><svg class="icon" style="stroke:var(--purple)" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg></div>
+                <h3>POS / medicine release</h3>
+                <p>Patient records + optional prescription linkage. Stock deducted in real time, sale recorded permanently.</p>
+            </div>
+            <div class="feat-cell">
+                <div class="feat-icon" style="background:var(--green-dim)"><svg class="icon" style="stroke:var(--green)" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div>
+                <h3>Immutable movement trail</h3>
+                <p>Every incoming delivery, release, and adjustment is permanently recorded. No edits, no gaps.</p>
+            </div>
+            <div class="feat-cell">
+                <div class="feat-icon" style="background:var(--accent-dim)"><svg class="icon" style="stroke:var(--accent)" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
+                <h3>Role-based access control</h3>
+                <p>Spatie permissions with distinct, granular responsibilities. Staff, Pharmacist, and Admin each see their tools.</p>
+            </div>
+        </div>
+    </section>
+
+    <section class="fade-in">
+        <div class="sec-label">Access model</div>
+        <div class="sec-title">Three roles, clear boundaries</div>
+        <p class="sec-sub">No role can access what it doesn't need.</p>
+        <div class="seat-grid">
+            <div class="seat-card">
+                <h3>Staff</h3>
+                <div class="seat-desc">Inventory & purchasing</div>
+                <div class="seat-feat">Receive deliveries and create batches</div>
+                <div class="seat-feat">Manage products & inventory</div>
+                <div class="seat-feat">Create and submit purchase orders</div>
+            </div>
+            <div class="seat-card">
+                <h3>Pharmacist</h3>
+                <div class="seat-desc">Patient-safe POS & prescriptions</div>
+                <div class="seat-feat">Create FEFO stock requests</div>
+                <div class="seat-feat">Record POS sales with patient records</div>
+                <div class="seat-feat">Link and dispense prescriptions</div>
+            </div>
+            <div class="seat-card">
+                <h3>Admin</h3>
+                <div class="seat-desc">Governance & audit controls</div>
+                <div class="seat-feat">Approve or reject purchase orders</div>
+                <div class="seat-feat">Override stock with PIN (audited)</div>
+                <div class="seat-feat">Full audit logs & reporting access</div>
+            </div>
+        </div>
+    </section>
+
+</div>
+
+<footer>
+    <div class="wrap">&copy; {{ now()->year }} Doseas — Inventory safety, POS checkout, and immutable audit trails.</div>
+</footer>
+
+<script>
+(function(){
+    const obs = new IntersectionObserver(es => es.forEach(e => { if(e.isIntersecting){ e.target.classList.add('visible'); obs.unobserve(e.target); }}), {threshold:0.1});
+    document.querySelectorAll('.fade-in').forEach(el => obs.observe(el));
+
+    function animCount(el, target, suffix, dur) {
+        let start = null;
+        function tick(ts) {
+            if(!start) start = ts;
+            const p = Math.min((ts-start)/dur, 1);
+            el.textContent = Math.round(p*target) + suffix;
+            if(p < 1) requestAnimationFrame(tick);
+        }
+        requestAnimationFrame(tick);
+    }
+    const statsObs = new IntersectionObserver(es => {
+        es.forEach(e => {
+            if(e.isIntersecting) {
+                document.querySelectorAll('[data-target]').forEach(el => animCount(el, +el.dataset.target, el.dataset.suffix, 1600));
+                statsObs.disconnect();
+            }
+        });
+    }, {threshold:0.5});
+    const sb = document.querySelector('.stats-bar');
+    if(sb) statsObs.observe(sb);
+
+    const wsteps = document.querySelectorAll('.wstep');
+    const panels = document.querySelectorAll('.preview-panel');
+    const wpTitle = document.getElementById('wp-title');
+    const wpStatus = document.getElementById('wp-status');
+    const wTitles = ['Purchase Order #PO-2041','Purchase Order #PO-2041','Delivery Receipt #DR-0052','Stock Request #SR-0078','POS Sale #TXN-1145'];
+    const wStats = [{t:'Pending',c:'status-pending'},{t:'Approved',c:'status-approved'},{t:'Received',c:'status-fulfilled'},{t:'Fulfilled (FEFO)',c:'status-fulfilled'},{t:'Completed',c:'status-sold'}];
+    wsteps.forEach((s,i) => s.addEventListener('click', () => {
+        wsteps.forEach(x => x.classList.remove('active'));
+        panels.forEach(p => p.classList.remove('active'));
+        s.classList.add('active');
+        document.getElementById('panel-'+i).classList.add('active');
+        wpTitle.textContent = wTitles[i];
+        wpStatus.className = 'wpreview-status ' + wStats[i].c;
+        wpStatus.textContent = wStats[i].t;
+    }));
+
+    const rtabs = document.querySelectorAll('.rtab');
+    const rpanels = document.querySelectorAll('.role-panel');
+    const rdTitle = document.getElementById('rd-title');
+    const rdBadge = document.getElementById('rd-badge');
+    const rConf = {
+        staff:      {title:'Staff Dashboard',      bg:'var(--amber-dim)',  col:'var(--amber)',  lbl:'Staff'},
+        pharmacist: {title:'Pharmacist Dashboard', bg:'var(--green-dim)',  col:'var(--green)',  lbl:'Pharmacist'},
+        admin:      {title:'Admin Dashboard',      bg:'var(--accent-dim)', col:'var(--accent)', lbl:'Admin'}
+    };
+    rtabs.forEach(t => t.addEventListener('click', () => {
+        const r = t.dataset.role;
+        rtabs.forEach(x => x.classList.remove('active'));
+        rpanels.forEach(p => p.classList.remove('active'));
+        t.classList.add('active');
+        document.getElementById('rpanel-' + r).classList.add('active');
+        const c = rConf[r];
+        rdTitle.textContent = c.title;
+        rdBadge.textContent = c.lbl;
+        rdBadge.style.background = c.bg;
+        rdBadge.style.color = c.col;
+    }));
+
+    window.toggleTool = function(btn) {
+        const body = btn.nextElementSibling;
+        const isOpen = btn.classList.contains('open');
+        const accordion = btn.closest('.tool-accordion');
+        accordion.querySelectorAll('.tool-trigger').forEach(b => {
+            b.classList.remove('open');
+            b.nextElementSibling.classList.remove('open');
+        });
+        if(!isOpen) {
+            btn.classList.add('open');
+            body.classList.add('open');
+        }
+    };
+
+    const slA = document.getElementById('slA'), slB = document.getElementById('slB'), slC = document.getElementById('slC'), slSale = document.getElementById('slSale');
+    function runSim() {
+        const a = +slA.value, b = +slB.value, c = +slC.value, sale = +slSale.value;
+        document.getElementById('valA').textContent = a;
+        document.getElementById('valB').textContent = b;
+        document.getElementById('valC').textContent = c;
+        document.getElementById('valSale').textContent = sale;
+        document.getElementById('sim-total').textContent = (a+b+c) + ' units';
+        let rem = sale;
+        const uA = Math.min(rem,a); rem -= uA;
+        const uB = Math.min(rem,b); rem -= uB;
+        const uC = Math.min(rem,c);
+        const mx = Math.max(a+b+c, 1);
+        document.getElementById('simA-val').textContent = uA > 0 ? uA+' used' : '—';
+        document.getElementById('simB-val').textContent = uB > 0 ? uB+' used' : '—';
+        document.getElementById('simC-val').textContent = uC > 0 ? uC+' used' : '—';
+        document.getElementById('simA-bar').style.width = Math.round(uA/mx*100)+'%';
+        document.getElementById('simB-bar').style.width = Math.round(uB/mx*100)+'%';
+        document.getElementById('simC-bar').style.width = Math.round(uC/mx*100)+'%';
+        const insuf = rem > 0;
+        document.getElementById('sim-warn').classList.toggle('visible', insuf);
+        document.getElementById('sim-ok').classList.toggle('visible', !insuf);
+    }
+    [slA,slB,slC,slSale].forEach(s => s.addEventListener('input', runSim));
+    runSim();
+
+    setInterval(() => {
+        const b = document.getElementById('b1');
+        if(b) b.style.opacity = b.style.opacity === '0.6' ? '1' : '0.6';
+    }, 1500);
+})();
+</script>
+</body>
 </html>

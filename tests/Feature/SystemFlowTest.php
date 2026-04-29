@@ -146,6 +146,7 @@ class SystemFlowTest extends TestCase
         ])->assertRedirect('/dashboard');
 
         $this->post(route('purchase-orders.receive', $po), [
+            'receive_date' => now()->toDateString(),
             'batch_number' => 'PO-RCV-001',
             'expiry_date' => now()->addMonths(8)->toDateString(),
         ])->assertRedirect();

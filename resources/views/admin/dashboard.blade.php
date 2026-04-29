@@ -292,7 +292,7 @@
                 },
                 stroke: {
                     curve: 'smooth',
-                    width: 3
+                    width: 5
                 },
                 colors: ['#2563eb', '#f59e0b'],
                 fill: {
@@ -300,8 +300,8 @@
                     gradient: {
                         shadeIntensity: 1,
                         inverseColors: false,
-                        opacityFrom: 0.28,
-                        opacityTo: 0.06,
+                        opacityFrom: 0.4,
+                        opacityTo: 0.4,s
                         stops: [0, 90, 100]
                     }
                 },

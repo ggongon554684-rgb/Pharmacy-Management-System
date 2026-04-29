@@ -8,18 +8,12 @@ return new class extends Migration
 {
     /**
      * Run the migrations.
+     * Note: products and sales already have softDeletes in their original create migrations.
      */
     public function up(): void
     {
-        Schema::table('products', function (Blueprint $table) {
-            $table->softDeletes();
-        });
-
+        // Skip products and sales - they already have softDeletes in create migrations
         Schema::table('purchase_orders', function (Blueprint $table) {
-            $table->softDeletes();
-        });
-
-        Schema::table('sales', function (Blueprint $table) {
             $table->softDeletes();
         });
 
@@ -53,15 +47,8 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('products', function (Blueprint $table) {
-            $table->dropSoftDeletes();
-        });
-
+        // Only drop for tables that were modified in up()
         Schema::table('purchase_orders', function (Blueprint $table) {
-            $table->dropSoftDeletes();
-        });
-
-        Schema::table('sales', function (Blueprint $table) {
             $table->dropSoftDeletes();
         });
 

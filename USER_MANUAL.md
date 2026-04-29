@@ -224,5 +224,148 @@ Reports can be viewed on-screen or exported as PDF.
 php artisan migrate:fresh --seed
 ```
 
-This resets the database to clean demo state.</content>
+This resets the database to clean demo state.
+
+---
+
+## X. User Interface Manual
+
+### Navigation Overview
+
+| Menu            | Purpose                                 |
+| --------------- | --------------------------------------- |
+| Dashboard       | Role-specific overview (KPIs, alerts)   |
+| Sales           | POS, create sale, view history          |
+| Products        | Product list, add new, batch management |
+| Patients        | Patient records, add new, history       |
+| Prescriptions   | Create, view, link to sales             |
+| Prescribers     | Doctor/prescriber management            |
+| Purchase Orders | Create PO, receive delivery             |
+| Stock Requests  | Request transfer, approve               |
+| Audit Logs      | View all system activities              |
+| Settings        | System configuration                    |
+
+### Step-by-Step Guide
+
+#### 1. Login and Dashboard Access
+
+1. Open browser to application URL
+2. Enter email and password
+3. Click "Login" button
+4. System redirects to role-specific dashboard
+
+**Interface Components:**
+
+- Login form with email, password fields
+- Error notifications for invalid credentials
+
+#### 2. Recording a Sale (POS)
+
+1. Click **Sales** → **New Sale**
+2. Select patient mode: "Existing" or "New"
+3. Search and add products (quantity validated against stock)
+4. Optionally link prescription (existing patients only)
+5. Select payment method (cash/card/insurance)
+6. Enter payment details based on method
+7. Click **Complete Sale**
+8. View receipt with print option
+
+**Form Elements:**
+
+- Patient selector dropdown
+- Product search with stock display
+- Quantity input (validated: positive integer)
+- Payment method radio buttons
+
+**Notifications:**
+
+- Success: "Sale recorded and stock released using FEFO."
+- Error: Inline validation messages below fields
+
+#### 3. Creating a Purchase Order
+
+1. Click **Purchase Orders** → **Create New**
+2. Select products and quantities
+3. Set expected delivery date
+4. Add notes (optional)
+5. Click **Submit Order**
+6. Status: "pending" until admin approval
+
+#### 4. Receiving Delivery
+
+1. Click **Incoming Deliveries**
+2. Select pending approved PO
+3. Enter batch numbers and expiry dates
+4. Verify quantities match delivery
+5. Click **Receive Stock**
+6. Inventory batches created automatically
+
+#### 5. Stock Request (Front-Shop Replenishment)
+
+1. Click **Stock Requests** → **Create New**
+2. Select product needing replenishment
+3. Enter quantity needed
+4. Click **Submit Request**
+5. Staff reviews and approves
+6. Stock transferred using FEFO
+
+#### 6. Kiosk Order Fulfillment
+
+1. Customer places order at `/kiosk-order`
+2. Customer receives QR code ticket
+3. Pharmacist scans QR or visits link
+4. System pre-fills sales/create
+5. Complete normal sale process
+
+### Key Interface Components
+
+| Component     | Location       | Purpose                           |
+| ------------- | -------------- | --------------------------------- |
+| Sidebar       | Left           | Main navigation menu              |
+| Top Bar       | Top            | User info, role indicator, logout |
+| KPI Cards     | Dashboard      | Quick metrics display             |
+| Data Tables   | All list views | Paginated data with search        |
+| Form Buttons  | Forms          | Submit, cancel actions            |
+| Alert Boxes   | Top of pages   | Success/error notifications       |
+| Status Badges | Tables         | Visual status indicators          |
+
+---
+
+## XI. Feature Highlights
+
+### Core Features
+
+| Feature               | User Need                     | Workflow Enhancement                    |
+| --------------------- | ----------------------------- | --------------------------------------- |
+| Role-Based Dashboard  | Quick overview of daily tasks | KPIs and alerts in one view             |
+| POS System            | Fast, accurate sales          | Real-time stock validation              |
+| Inventory Management  | Track stock by batch/expiry   | FEFO prevents expired stock             |
+| Purchase Orders       | Restock efficiently           | Approval workflow ensures authorization |
+| Prescription Tracking | Link Rx to dispensing         | Patient safety with quantity limits     |
+| Audit Logging         | Compliance and accountability | Complete action history                 |
+| Kiosk Ordering        | Self-service option           | Reduces counter congestion              |
+| Stock Requests        | Internal transfers            | Front/back inventory sync               |
+
+### Laravel Features Applied
+
+| Feature         | Implementation                                          |
+| --------------- | ------------------------------------------------------- |
+| Authentication  | `Auth` facade, session management, role-based redirects |
+| Eloquent ORM    | Models with relationships and scopes                    |
+| Blade Templates | Layouts, components, directives                         |
+| Validation      | Form Request classes, controller validation             |
+| Middleware      | `auth`, `role`, `can` for access control                |
+| Database        | Transactions, migrations, seeders                       |
+
+### Quick Reference
+
+| Task          | Menu Path                | Key Form Fields               |
+| ------------- | ------------------------ | ----------------------------- | ---------- |
+| New Sale      | Sales → New Sale         | Patient, Products, Payment    |
+| Add Patient   | Patients → Create        | Name, DOB, Contact, Allergies |
+| Create PO     | Purchase Orders → Create | Products, Quantities, Date    |
+| Receive Stock | Incoming → Receive       | Batch, Expiry, Qty            |
+| Stock Request | Stock Requests → Create  | Product, Quantity             |
+| View Reports  | Dashboard                | Auto-populated KPIs           | </content> |
+
 <parameter name="filePath">c:\Users\gabgab8608\pharmacy\USER_MANUAL.md

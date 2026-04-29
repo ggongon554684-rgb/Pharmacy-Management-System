@@ -230,6 +230,20 @@ class DashboardController extends Controller
                     'borderColor' => $trendColors[$index] ?? '#378ADD',
                 ];
             }
+            $inventoryLevels = DB::table('products')
+    ->leftJoin('inventory_batches', 'inventory_batches.product_id', '=', 'products.id')
+    ->leftJoin('inventory_locations', 'inventory_locations.id', '=', 'inventory_batches.location_id')
+    ->selectRaw('
+        products.id,
+        products.name,
+        products.reorder_level,
+        COALESCE(SUM(CASE WHEN inventory_locations.code = "back" THEN inventory_batches.quantity ELSE 0 END), 0) as back_stock,
+        COALESCE(SUM(CASE WHEN inventory_locations.code = "front" THEN inventory_batches.quantity ELSE 0 END), 0) as front_stock
+    ')
+    ->groupBy('products.id', 'products.name', 'products.reorder_level')
+    ->orderBy('products.name')
+    ->get();
+
 
             return [
                 'pendingStockRequestCount'      => StockRequest::where('status', 'pending')->count(),
@@ -239,6 +253,8 @@ class DashboardController extends Controller
                 'pendingIncomingDeliveries'     => PurchaseOrder::whereIn('status', ['pending', 'approved'])->orderBy('expected_date')->limit(3)->get(),
                 'trendLabels'                   => collect($trendDays)->map(fn(string $d) => Carbon::parse($d)->format('D'))->values()->all(),
                 'consumptionTrendDatasets'      => $consumptionTrendDatasets,
+                'inventoryLevels' => $inventoryLevels,
+
             ];
         });
     }
