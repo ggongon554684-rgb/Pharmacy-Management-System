@@ -12,6 +12,43 @@ class InventoryBatch extends Model
     use HasFactory, SoftDeletes;
     protected $fillable = ['product_id', 'location_id', 'batch_number', 'quantity', 'cost_price', 'expiry_date'];
 
+    protected static function booted(): void
+    {
+        // Trigger replacement: prevent_negative_stock (BEFORE UPDATE)
+        static::updating(function (self $batch): void {
+            if ($batch->quantity < 0) {
+                throw new \Exception('Stock quantity cannot go below zero');
+            }
+        });
+
+        // Trigger replacement: log_stock_movement (AFTER UPDATE)
+        static::updated(function (self $batch): void {
+            if (! $batch->wasChanged('quantity')) {
+                return;
+            }
+
+            $oldQty = (int) $batch->getOriginal('quantity');
+            $newQty = (int) $batch->quantity;
+            $difference = abs($newQty - $oldQty);
+
+            if ($difference === 0) {
+                return;
+            }
+
+            \App\Models\StockMovement::create([
+                'product_id' => $batch->product_id,
+                'inventory_batch_id' => $batch->id,
+                'moved_by' => null,
+                'type' => $newQty > $oldQty ? 'incoming' : 'release',
+                'quantity' => $difference,
+                'reference_type' => 'inventory_batches',
+                'reference_id' => $batch->id,
+                'notes' => "Auto-logged: quantity changed from {$oldQty} to {$newQty}",
+                'moved_at' => now(),
+            ]);
+        });
+    }
+
     // Relationship: A batch belongs to one specific product
     public function product()
     {

@@ -7,10 +7,23 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Prunable;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Str;
 
 class PurchaseOrder extends Model
 {
     use HasFactory, SoftDeletes, Prunable;
+
+    protected static function booted(): void
+    {
+        // Trigger replacement: set_po_number (BEFORE INSERT)
+        static::creating(function (self $order): void {
+            if (! empty($order->po_number)) {
+                return;
+            }
+
+            $order->po_number = 'PO-' . now()->format('Ymd') . '-' . strtoupper(substr(str_replace('-', '', (string) Str::uuid()), 0, 7));
+        });
+    }
 
     protected $fillable = [
         'po_number',
