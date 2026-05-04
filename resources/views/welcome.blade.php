@@ -75,7 +75,7 @@
         section { padding: 5rem 0; border-top: 1px solid var(--border); }
         .sec-label { font-size: 11px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--tm); margin-bottom: 0.6rem; }
         .sec-title { font-family: var(--font-d); font-size: clamp(1.7rem, 3vw, 2.2rem); font-weight: 400; letter-spacing: -0.025em; color: var(--tp); margin-bottom: 0.5rem; }
-        .sec-sub { font-size: 15px; color: var(--ts); max-width: 52ch; margin-bottom: 2.5rem; line-height: 1.7; }
+        .sec-sub { font-size: 15px; color: var(--ts); max-width: 52ch; margin-bottom: 2rem; line-height: 1.7; }
 
         /* HERO */
         .hero { padding: 140px 0 80px; display: grid; grid-template-columns: 1.1fr 0.9fr; gap: 3.5rem; align-items: center; border: none; }
@@ -86,12 +86,13 @@
         h1 em { font-style: italic; color: var(--accent); }
         .hero-desc { font-size: 16px; color: var(--ts); line-height: 1.75; max-width: 46ch; margin-bottom: 2rem; }
         .hero-actions { display: flex; gap: 10px; flex-wrap: wrap; }
-        .btn { display: inline-flex; align-items: center; gap: 7px; padding: 10px 22px; border-radius: var(--rs); font-size: 14px; font-weight: 500; text-decoration: none; border: 1px solid transparent; transition: all 0.15s; cursor: pointer; font-family: var(--font-b); }
+        .btn { display: inline-flex; align-items: center; gap: 7px; padding: 11px 22px; border-radius: var(--rs); font-size: 14px; font-weight: 500; text-decoration: none; border: 1px solid transparent; transition: all 0.15s; cursor: pointer; font-family: var(--font-b); }
         .btn-p { background: var(--accent); color: #fff; border-color: var(--accent); }
         .btn-p:hover { background: #2563eb; }
         .btn-g { background: transparent; color: var(--ts); border-color: var(--border-md); }
         .btn-g:hover { background: rgba(255,255,255,0.05); color: var(--tp); }
-        .hero-trust { display: flex; gap: 1.5rem; margin-top: 1.75rem; flex-wrap: wrap; }
+        .hero-actions .btn-p { box-shadow: 0 8px 24px rgba(37,99,235,0.25); }
+        .hero-trust { display: flex; gap: 1.5rem; margin-top: 1.4rem; flex-wrap: wrap; }
         .trust-item { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--tm); }
         .trust-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--green); }
 
@@ -116,6 +117,7 @@
         .stat-cell { background: var(--bg-card); padding: 1.75rem 1.5rem; text-align: center; }
         .stat-num { font-family: var(--font-d); font-size: 2.2rem; font-weight: 400; color: var(--tp); letter-spacing: -0.03em; }
         .stat-label { font-size: 12px; color: var(--tm); margin-top: 4px; text-transform: uppercase; letter-spacing: 0.06em; }
+        .stats-note { margin-top: 0.75rem; margin-bottom: 0.2rem; font-size: 12px; color: var(--tm); text-align: right; }
 
         /* WORKFLOW */
         .workflow-container { display: grid; grid-template-columns: 1fr 1.3fr; gap: 3rem; align-items: start; }
@@ -176,12 +178,11 @@
 
         /* TOOL ACCORDION */
         .tool-accordion { display: flex; flex-direction: column; border-radius: var(--rs); overflow: hidden; border: 1px solid var(--border); }
-        .tool-item {}
         .tool-trigger { width: 100%; background: rgba(255,255,255,0.02); border: none; border-top: 1px solid var(--border); padding: 10px 14px; display: flex; align-items: center; justify-content: space-between; cursor: pointer; text-align: left; transition: background 0.15s; gap: 10px; }
         .tool-item:first-child .tool-trigger { border-top: none; }
         .tool-trigger:hover { background: rgba(255,255,255,0.05); }
         .tool-trigger.open { background: rgba(255,255,255,0.04); }
-        .tool-trigger-name { font-size: 13px; font-weight: 500; color: var(--tp); }
+        .tool-trigger-name { font-size: 13px; font-weight: 500; color: var(--tp); display: block; line-height: 1.35; }
         .tool-chevron { flex-shrink: 0; width: 16px; height: 16px; stroke: var(--tm); fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; transition: transform 0.2s; }
         .tool-trigger.open .tool-chevron { transform: rotate(180deg); }
         .tool-body { display: none; padding: 10px 14px 13px; border-top: 1px solid var(--border); background: rgba(255,255,255,0.015); font-size: 13px; color: var(--ts); line-height: 1.6; }
@@ -232,6 +233,16 @@
 
         svg.icon { width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 
+        @media (prefers-reduced-motion: reduce) {
+            html { scroll-behavior: auto; }
+            .fade-in, .preview-panel.active { animation: none !important; transition: none !important; }
+            .hero-badge-dot { animation: none; }
+        }
+
+        @media (max-width: 980px) {
+            .nav-links a.nav-anchor { display: none; }
+        }
+
         @media (max-width: 800px) {
             nav { padding: 0 1.25rem; }
             .wrap { padding: 0 1.25rem; }
@@ -240,6 +251,8 @@
             .workflow-container, .role-switcher, .sim-grid { grid-template-columns: 1fr; }
             .feat-grid { grid-template-columns: 1fr 1fr; }
             .seat-grid { grid-template-columns: 1fr; }
+            .tool-trigger { align-items: flex-start; }
+            .tool-chevron { margin-top: 2px; }
         }
     </style>
 </head>
@@ -248,11 +261,14 @@
 <nav>
     <a href="/" class="nav-brand">Doseas <span class="pill-badge">v1</span></a>
     <div class="nav-links">
+        <a href="#workflow" class="nav-anchor">How it works</a>
+        <a href="#roles" class="nav-anchor">Roles</a>
+        <a href="#demo" class="nav-anchor">Demo</a>
         @if (Route::has('login'))
             @auth
-                <a href="{{ url('/home') }}">Dashboard</a>
+                <a href="{{ url('/home') }}" class="btn-nav-p">Dashboard</a>
             @else
-                <a href="{{ route('public.kiosk-order') }}" class="btn-nav-o">Open Kiosk</a>
+                <a href="{{ route('public.kiosk-order') }}" class="btn-nav-o">Kiosk Order</a>
                 <a href="{{ route('login') }}" class="btn-nav-p">Log in</a>
             @endauth
         @endif
@@ -263,20 +279,20 @@
 
     <div class="hero">
         <div>
-            <div class="hero-badge"><span class="hero-badge-dot"></span> Inventory-safe · FEFO-compliant</div>
-            <h1>Pharmacy ops that<br><em>never oversell.</em></h1>
-            <p class="hero-desc">Role-based workflows for inventory batches, purchase orders, FEFO stock releases, POS sales, and an immutable audit trail — all in one system.</p>
+            <div class="hero-badge"><span class="hero-badge-dot"></span> FEFO-safe workflow · role-based controls</div>
+            <h1>Run pharmacy operations<br><em>without stock guesswork.</em></h1>
+            <p class="hero-desc">Doseas helps staff, pharmacists, and admins manage purchasing, inventory batches, dispensing, and audit-ready records in one system.</p>
             <div class="hero-actions">
                 <a href="{{ route('login') }}" class="btn btn-p">
                     <svg class="icon" viewBox="0 0 24 24"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
-                    Log in to dashboard
+                    Log in to Dashboard
                 </a>
-                <a href="{{ route('public.kiosk-order') }}" class="btn btn-g">Open Kiosk -></a>
+                <a href="{{ route('public.kiosk-order') }}" class="btn btn-g">Open Kiosk Order</a>
             </div>
             <div class="hero-trust">
-                <span class="trust-item"><span class="trust-dot"></span> Stock never goes negative</span>
-                <span class="trust-item"><span class="trust-dot"></span> FEFO auto-fulfillment</span>
-                <span class="trust-item"><span class="trust-dot"></span> Immutable audit trail</span>
+                <span class="trust-item"><span class="trust-dot"></span> Prevent negative stock updates</span>
+                <span class="trust-item"><span class="trust-dot"></span> FEFO-first release and dispensing</span>
+                <span class="trust-item"><span class="trust-dot"></span> Audited inventory and sales actions</span>
             </div>
         </div>
         <div class="hero-card">
@@ -313,22 +329,23 @@
     </div>
 
     <div class="stats-bar fade-in">
-        <div class="stat-cell"><div class="stat-num" data-target="100" data-suffix="%">0%</div><div class="stat-label">Stock safety</div></div>
+        <div class="stat-cell"><div class="stat-num" data-target="100" data-suffix="%">0%</div><div class="stat-label">Sample stock safety</div></div>
         <div class="stat-cell"><div class="stat-num" data-target="3" data-suffix="">0</div><div class="stat-label">Role tiers</div></div>
-        <div class="stat-cell"><div class="stat-num" data-target="0" data-suffix="%">0%</div><div class="stat-label">Negative stock events</div></div>
-        <div class="stat-cell"><div class="stat-num" data-target="100" data-suffix="%">0%</div><div class="stat-label">Actions audited</div></div>
+        <div class="stat-cell"><div class="stat-num" data-target="0" data-suffix="%">0%</div><div class="stat-label">Sample negative events</div></div>
+        <div class="stat-cell"><div class="stat-num" data-target="100" data-suffix="%">0%</div><div class="stat-label">Sample actions audited</div></div>
     </div>
+    <div class="stats-note fade-in">Sample metrics for demonstration only.</div>
 
-    <section class="fade-in">
+    <section class="fade-in" id="workflow">
         <div class="sec-label">How it works</div>
-        <div class="sec-title">From order to dispensing</div>
-        <p class="sec-sub">A complete workflow from purchase order through to patient sale — every step tracked and approved. Click each step to see a preview.</p>
+        <div class="sec-title">From procurement to dispensing</div>
+        <p class="sec-sub">Follow the 5-step operational flow from purchase order to POS release. Every handoff is logged and role-controlled.</p>
         <div class="workflow-container">
             <div class="workflow-steps" id="wsteps">
                 <div class="wstep active" data-step="0">
                     <div class="wstep-num">1</div>
                     <div class="wstep-content">
-                        <div class="wstep-title">Staff creates Purchase Order</div>
+                        <div class="wstep-title">Staff creates purchase order</div>
                         <div class="wstep-desc">Staff lists required medicines, sets supplier, and submits for admin review.</div>
                     </div>
                 </div>
@@ -336,7 +353,7 @@
                 <div class="wstep" data-step="1">
                     <div class="wstep-num">2</div>
                     <div class="wstep-content">
-                        <div class="wstep-title">Admin approves the PO</div>
+                        <div class="wstep-title">Admin reviews and approves</div>
                         <div class="wstep-desc">Admin reviews line items, confirms budget, and approves or rejects with notes.</div>
                     </div>
                 </div>
@@ -344,7 +361,7 @@
                 <div class="wstep" data-step="2">
                     <div class="wstep-num">3</div>
                     <div class="wstep-content">
-                        <div class="wstep-title">Receiving creates inventory batches</div>
+                        <div class="wstep-title">Receiving creates batches</div>
                         <div class="wstep-desc">Staff records batch numbers and expiry dates. Stock added to back inventory automatically.</div>
                     </div>
                 </div>
@@ -352,7 +369,7 @@
                 <div class="wstep" data-step="3">
                     <div class="wstep-num">4</div>
                     <div class="wstep-content">
-                        <div class="wstep-title">Pharmacist requests front stock (FEFO)</div>
+                        <div class="wstep-title">Front stock request uses FEFO</div>
                         <div class="wstep-desc">Stock request pulls from back inventory using First Expired, First Out — oldest batches move to front first.</div>
                     </div>
                 </div>
@@ -360,7 +377,7 @@
                 <div class="wstep" data-step="4">
                     <div class="wstep-num">5</div>
                     <div class="wstep-content">
-                        <div class="wstep-title">POS sale deducts from front stock</div>
+                        <div class="wstep-title">POS sale deducts in real time</div>
                         <div class="wstep-desc">Patient record created, prescription optionally linked, payment recorded, stock deducted in real time.</div>
                     </div>
                 </div>
@@ -422,10 +439,10 @@
         </div>
     </section>
 
-    <section class="fade-in">
+    <section class="fade-in" id="roles">
         <div class="sec-label">Role-based access</div>
         <div class="sec-title">Each role sees their tools</div>
-        <p class="sec-sub">Select a role, then click any tool to see exactly what it does and how to use it.</p>
+        <p class="sec-sub">Choose a role to preview its dashboard responsibilities and day-to-day actions.</p>
         <div class="role-switcher">
             <div class="role-tabs">
                 <div class="rtab active" data-role="staff">
@@ -636,10 +653,10 @@
         </div>
     </section>
 
-    <section class="fade-in">
+    <section class="fade-in" id="demo">
         <div class="sec-label">Interactive demo</div>
         <div class="sec-title">See FEFO in action</div>
-        <p class="sec-sub">Adjust batch quantities and sale size to watch FEFO fulfillment work automatically — oldest batches consumed first.</p>
+        <p class="sec-sub">Adjust batch quantities and sale size to simulate FEFO fulfillment. This is a product demo, not live pharmacy data.</p>
         <div class="sim-grid">
             <div class="sim-controls">
                 <div>
@@ -682,10 +699,10 @@
         </div>
     </section>
 
-    <section class="fade-in">
-        <div class="sec-label">Platform</div>
-        <div class="sec-title">Everything you need</div>
-        <p class="sec-sub">Built specifically for pharmacy workflows — not a generic inventory tool.</p>
+    <section class="fade-in" id="platform">
+        <div class="sec-label">Platform outcomes</div>
+        <div class="sec-title">Built for pharmacy operations</div>
+        <p class="sec-sub">The platform combines inventory safety, patient dispensing, and governance in one workflow.</p>
         <div class="feat-grid">
             <div class="feat-cell">
                 <div class="feat-icon" style="background:var(--accent-dim)"><svg class="icon" style="stroke:var(--accent)" viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg></div>
@@ -694,36 +711,36 @@
             </div>
             <div class="feat-cell">
                 <div class="feat-icon" style="background:var(--green-dim)"><svg class="icon" style="stroke:var(--green)" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></div>
-                <h3>Purchase Orders (PO)</h3>
+                <h3>Controlled purchasing</h3>
                 <p>Create as staff, approve as admin, receive to auto-generate inventory batches with expiry data.</p>
             </div>
             <div class="feat-cell">
                 <div class="feat-icon" style="background:var(--amber-dim)"><svg class="icon" style="stroke:var(--amber)" viewBox="0 0 24 24"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg></div>
-                <h3>Stock Requests (FEFO)</h3>
+                <h3>FEFO stock movement</h3>
                 <p>Pull from back inventory to front using First Expired, First Out logic — automatically, every time.</p>
             </div>
             <div class="feat-cell">
                 <div class="feat-icon" style="background:var(--purple-dim)"><svg class="icon" style="stroke:var(--purple)" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg></div>
-                <h3>POS / medicine release</h3>
+                <h3>Patient-safe dispensing</h3>
                 <p>Patient records + optional prescription linkage. Stock deducted in real time, sale recorded permanently.</p>
             </div>
             <div class="feat-cell">
                 <div class="feat-icon" style="background:var(--green-dim)"><svg class="icon" style="stroke:var(--green)" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div>
-                <h3>Immutable movement trail</h3>
+                <h3>Traceable movement records</h3>
                 <p>Every incoming delivery, release, and adjustment is permanently recorded. No edits, no gaps.</p>
             </div>
             <div class="feat-cell">
                 <div class="feat-icon" style="background:var(--accent-dim)"><svg class="icon" style="stroke:var(--accent)" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
-                <h3>Role-based access control</h3>
+                <h3>Role-based permissions</h3>
                 <p>Spatie permissions with distinct, granular responsibilities. Staff, Pharmacist, and Admin each see their tools.</p>
             </div>
         </div>
     </section>
 
-    <section class="fade-in">
+    <section class="fade-in" id="access">
         <div class="sec-label">Access model</div>
         <div class="sec-title">Three roles, clear boundaries</div>
-        <p class="sec-sub">No role can access what it doesn't need.</p>
+        <p class="sec-sub">Each team member gets only the tools they need for their responsibilities.</p>
         <div class="seat-grid">
             <div class="seat-card">
                 <h3>Staff</h3>
@@ -752,7 +769,7 @@
 </div>
 
 <footer>
-    <div class="wrap">&copy; {{ now()->year }} Doseas — Inventory safety, POS checkout, and immutable audit trails.</div>
+    <div class="wrap">&copy; {{ now()->year }} Doseas — FEFO-safe inventory, dispensing, and audit-ready operations.</div>
 </footer>
 
 <script>
@@ -859,10 +876,13 @@
     [slA,slB,slC,slSale].forEach(s => s.addEventListener('input', runSim));
     runSim();
 
-    setInterval(() => {
-        const b = document.getElementById('b1');
-        if(b) b.style.opacity = b.style.opacity === '0.6' ? '1' : '0.6';
-    }, 1500);
+    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if(!prefersReducedMotion) {
+        setInterval(() => {
+            const b = document.getElementById('b1');
+            if(b) b.style.opacity = b.style.opacity === '0.6' ? '1' : '0.6';
+        }, 1500);
+    }
 })();
 </script>
 </body>

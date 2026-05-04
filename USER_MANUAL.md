@@ -293,12 +293,12 @@ This resets the database to clean demo state.
 
 #### 4. Receiving Delivery
 
-1. Click **Incoming Deliveries**
-2. Select pending approved PO
-3. Enter batch numbers and expiry dates
-4. Verify quantities match delivery
-5. Click **Receive Stock**
-6. Inventory batches created automatically
+    1. Click **Incoming Deliveries**
+    2. Select pending approved PO
+    3. Enter batch numbers and expiry dates
+    4. Verify quantities match delivery
+    5. Click **Receive Stock**
+    6. Inventory batches created automatically
 
 #### 5. Stock Request (Front-Shop Replenishment)
 

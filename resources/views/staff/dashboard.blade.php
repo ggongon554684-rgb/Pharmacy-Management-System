@@ -105,21 +105,76 @@
                     </div>
                 </div>
 
+                {{-- FIX: row3 left column now stacks trend chart + inventory levels --}}
                 <div class="row3">
-                    <div class="card-soft" style="align-self: start;">
-                        <div class="card-hd">Stock consumption trend — last 7 days</div>
-                        <div class="legend-row" id="trend-legend"></div>
-                        <div style="height:200px; max-height:200px; overflow:hidden;">
-                            <canvas
-                                id="trendChart"
-                                data-labels='@json($trendLabels ?? [])'
-                                data-datasets='@json($consumptionTrendDatasets ?? [])'
-                                role="img"
-                                aria-label="Line chart showing daily consumption over 7 days"
-                            ></canvas>
-                        </div>
-                    </div>
 
+                    {{-- LEFT COLUMN: trend chart on top, inventory levels below --}}
+                    <div style="display:flex; flex-direction:column; gap:16px;">
+
+                        <div class="card-soft">
+                            <div class="card-hd">Stock consumption trend — last 7 days</div>
+                            <div class="legend-row" id="trend-legend"></div>
+                            <div style="height:200px; max-height:200px; overflow:hidden;">
+                                <canvas
+                                    id="trendChart"
+                                    data-labels='@json($trendLabels ?? [])'
+                                    data-datasets='@json($consumptionTrendDatasets ?? [])'
+                                    role="img"
+                                    aria-label="Line chart showing daily consumption over 7 days"
+                                ></canvas>
+                            </div>
+                        </div>
+
+                        <div class="card-soft">
+                            <div class="card-hd">Front & Back Inventory Levels</div>
+                            <div style="font-size:12px;color:var(--text-muted);margin-bottom:10px;">
+                                Live stock per location across all products
+                            </div>
+                            <table class="tbl">
+                                <thead>
+                                    <tr>
+                                        <th style="width:35%;">Product</th>
+                                        <th style="width:15%;text-align:right;">Back</th>
+                                        <th style="width:15%;text-align:right;">Front</th>
+                                        <th style="width:15%;text-align:right;">Total</th>
+                                        <th style="width:20%;text-align:center;">Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @forelse($inventoryLevels as $item)
+                                        @php
+                                            $total      = $item->back_stock + $item->front_stock;
+                                            $threshold  = max((int) $item->reorder_level, 1);
+                                            $isCritical = $total <= floor($threshold * 0.4);
+                                            $isLow      = !$isCritical && $total <= $threshold;
+                                        @endphp
+                                        <tr>
+                                            <td>{{ $item->name }}</td>
+                                            <td style="text-align:right;">{{ number_format($item->back_stock) }}</td>
+                                            <td style="text-align:right;">{{ number_format($item->front_stock) }}</td>
+                                            <td style="text-align:right;font-weight:600;">{{ number_format($total) }}</td>
+                                            <td style="text-align:center;">
+                                                @if($isCritical)
+                                                    <span class="badge-pill b-danger">Critical</span>
+                                                @elseif($isLow)
+                                                    <span class="badge-pill b-warn">Low</span>
+                                                @else
+                                                    <span class="badge-pill b-ok">Healthy</span>
+                                                @endif
+                                            </td>
+                                        </tr>
+                                    @empty
+                                        <tr>
+                                            <td colspan="5" class="text-center">No inventory data found.</td>
+                                        </tr>
+                                    @endforelse
+                                </tbody>
+                            </table>
+                        </div>
+
+                    </div>{{-- end left column --}}
+
+                    {{-- RIGHT COLUMN: pending transfers + incoming deliveries (unchanged) --}}
                     <div class="card-soft">
                         <div class="card-hd">Pending transfers</div>
                         <div style="font-size:12px;color:var(--text-muted);margin-bottom:12px;">Back inventory to Front shop</div>
@@ -154,55 +209,8 @@
                             <div style="margin-top:8px;"><span class="badge-pill b-info">{{ $pendingIncomingDeliveriesCount }} PO pending</span></div>
                         </div>
                     </div>
-                </div>
 
-                {{-- FRONT & BACK INVENTORY LEVELS --}}
-                <div class="card-soft" style="margin-top:16px;">
-                    <div class="card-hd">Front & Back Inventory Levels</div>
-                    <div style="font-size:12px;color:var(--text-muted);margin-bottom:10px;">
-                        Live stock per location across all products
-                    </div>
-                    <table class="tbl">
-                        <thead>
-                            <tr>
-                                <th style="width:35%;">Product</th>
-                                <th style="width:15%;text-align:right;">Back Stock</th>
-                                <th style="width:15%;text-align:right;">Front Stock</th>
-                                <th style="width:15%;text-align:right;">Total</th>
-                                <th style="width:20%;text-align:center;">Status</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @forelse($inventoryLevels as $item)
-                                @php
-                                    $total      = $item->back_stock + $item->front_stock;
-                                    $threshold  = max((int) $item->reorder_level, 1);
-                                    $isCritical = $total <= floor($threshold * 0.4);
-                                    $isLow      = !$isCritical && $total <= $threshold;
-                                @endphp
-                                <tr>
-                                    <td>{{ $item->name }}</td>
-                                    <td style="text-align:right;">{{ number_format($item->back_stock) }}</td>
-                                    <td style="text-align:right;">{{ number_format($item->front_stock) }}</td>
-                                    <td style="text-align:right;font-weight:600;">{{ number_format($total) }}</td>
-                                    <td style="text-align:center;">
-                                        @if($isCritical)
-                                            <span class="badge-pill b-danger">Critical</span>
-                                        @elseif($isLow)
-                                            <span class="badge-pill b-warn">Low</span>
-                                        @else
-                                            <span class="badge-pill b-ok">Healthy</span>
-                                        @endif
-                                    </td>
-                                </tr>
-                            @empty
-                                <tr>
-                                    <td colspan="5" class="text-center">No inventory data found.</td>
-                                </tr>
-                            @endforelse
-                        </tbody>
-                    </table>
-                </div>
+                </div>{{-- end row3 --}}
 
                 <div class="card-soft">
                     <div class="card-hd">Recent inventory activity</div>
@@ -300,4 +308,4 @@
             });
         })();
     </script>
-</x-app-layout>
+</x-app-layout> 

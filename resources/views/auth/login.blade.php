@@ -9,7 +9,7 @@
     <style>
         body { background: #f5f7fb; }
         .login-card { max-width: 430px; margin: 6vh auto; border: 0; border-radius: 14px; }
-        .logo-wrap svg { width: 48px; height: 48px; }
+        .logo-wrap img { width: 48px; height: 48px; object-fit: contain; }
     </style>
 </head>
 <body>

@@ -50,7 +50,6 @@ class DashboardController extends Controller
                 ->pluck('total', 'code');
 
             // Single query: count low stock using a pure SQL HAVING clause
-            // instead of fetching all products into PHP and filtering in memory
             $lowStockCount = DB::table('products')
                 ->leftJoin('inventory_batches', 'inventory_batches.product_id', '=', 'products.id')
                 ->selectRaw('products.id, products.reorder_level, COALESCE(SUM(inventory_batches.quantity), 0) as stock')
@@ -79,7 +78,6 @@ class DashboardController extends Controller
             $trendStart = Carbon::today()->subDays(6);
             $trendEnd   = Carbon::today();
 
-            // Fetch sales and purchases trends in parallel-friendly separate queries
             $salesTrend = Sale::query()
                 ->selectRaw('DATE(created_at) as day, SUM(total_amount) as total')
                 ->whereBetween('created_at', [$trendStart->copy()->startOfDay(), $trendEnd->copy()->endOfDay()])
@@ -92,19 +90,18 @@ class DashboardController extends Controller
                 ->groupBy('day')
                 ->pluck('total', 'day');
 
-            $trendLabels   = [];
-            $salesSeries   = [];
+            $trendLabels    = [];
+            $salesSeries    = [];
             $purchaseSeries = [];
 
             for ($date = $trendStart->copy(); $date->lte($trendEnd); $date->addDay()) {
-                $key             = $date->toDateString();
-                $trendLabels[]   = $date->format('M d');
-                $salesSeries[]   = round((float) ($salesTrend[$key] ?? 0), 2);
+                $key              = $date->toDateString();
+                $trendLabels[]    = $date->format('M d');
+                $salesSeries[]    = round((float) ($salesTrend[$key] ?? 0), 2);
                 $purchaseSeries[] = round((float) ($purchaseTrend[$key] ?? 0), 2);
             }
 
             // Stock health: single SQL query with conditional aggregation
-            // instead of loading all products into PHP memory
             $stockHealth = DB::table('products')
                 ->leftJoin('inventory_batches', 'inventory_batches.product_id', '=', 'products.id')
                 ->selectRaw('
@@ -114,8 +111,8 @@ class DashboardController extends Controller
                 ->groupBy('products.id', 'products.reorder_level')
                 ->get();
 
-            $low      = 0;
-            $normal   = 0;
+            $low       = 0;
+            $normal    = 0;
             $overstock = 0;
             foreach ($stockHealth as $row) {
                 $stock   = (int) $row->stock;
@@ -139,22 +136,26 @@ class DashboardController extends Controller
                 ->get();
 
             return [
-                'totalRevenue'        => (float) Sale::sum('total_amount'),
-                'totalPurchaseCost'   => (float) PurchaseOrder::sum('total_cost'),
-                'recentSales'         => Sale::with('patient')->latest()->limit(5)->get(),
-                'recentPurchaseOrders'=> PurchaseOrder::latest()->limit(5)->get(),
-                'incomingDeliveries'  => PurchaseOrder::query()
+                'totalRevenue'             => (float) Sale::sum('total_amount'),
+                'totalPurchaseCost'        => (float) PurchaseOrder::sum('total_cost'),
+                'recentSales'              => Sale::with('patient')->latest()->limit(5)->get(),
+                'recentPurchaseOrders'     => PurchaseOrder::latest()->limit(5)->get(),
+                'incomingDeliveries'       => PurchaseOrder::query()
                     ->whereIn('status', ['approved', 'pending'])
                     ->whereNotNull('expected_date')
                     ->orderBy('expected_date')
                     ->limit(6)
                     ->get(),
-                'topMovingProducts'   => $topMovingProducts,
-                'trendLabels'         => $trendLabels,
-                'salesTrendSeries'    => $salesSeries,
-                'purchaseTrendSeries' => $purchaseSeries,
-                'stockHealthLabels'   => ['Low Stock', 'Normal Stock', 'Overstock'],
-                'stockHealthSeries'   => [$low, $normal, $overstock],
+                // FIX: expose the two arrays the chart JS reads
+                'topMovingProducts'        => $topMovingProducts,
+                'topMovingProductLabels'   => $topMovingProducts->pluck('product_name')->values()->all(),
+                'topMovingProductSeries'   => $topMovingProducts->pluck('total_sold')->map(fn ($v) => (int) $v)->values()->all(),
+
+                'trendLabels'              => $trendLabels,
+                'salesTrendSeries'         => $salesSeries,
+                'purchaseTrendSeries'      => $purchaseSeries,
+                'stockHealthLabels'        => ['Low Stock', 'Normal Stock', 'Overstock'],
+                'stockHealthSeries'        => [$low, $normal, $overstock],
             ];
         });
     }
@@ -173,7 +174,6 @@ class DashboardController extends Controller
                 $trendDays[] = $date->toDateString();
             }
 
-            // Low stock: use subquery to avoid ONLY_FULL_GROUP_BY issues
             $lowStockItems = DB::table('products')
                 ->select('products.id', 'products.name', 'products.generic_name', 'products.sku', 'products.price', 'products.reorder_level', 'products.created_at', 'products.updated_at', 'products.deleted_at')
                 ->selectSub(function ($query) {
@@ -199,8 +199,6 @@ class DashboardController extends Controller
                 ->limit(4)
                 ->get();
 
-            // Single trend query filtered to only the top-4 product IDs
-            // instead of fetching the entire table and pivoting in PHP
             $topProductIds = $topConsumedProducts->pluck('id')->all();
 
             $rawTrendRows = SaleLineItem::query()
@@ -217,7 +215,7 @@ class DashboardController extends Controller
                 $qtyByProductAndDay[(int) $row->product_id][$row->sale_day] = (int) $row->qty;
             }
 
-            $trendColors             = ['#378ADD', '#1D9E75', '#EF9F27', '#7F77DD'];
+            $trendColors              = ['#378ADD', '#1D9E75', '#EF9F27', '#7F77DD'];
             $consumptionTrendDatasets = [];
             foreach ($topConsumedProducts as $index => $topProduct) {
                 $data = [];
@@ -230,31 +228,30 @@ class DashboardController extends Controller
                     'borderColor' => $trendColors[$index] ?? '#378ADD',
                 ];
             }
-            $inventoryLevels = DB::table('products')
-    ->leftJoin('inventory_batches', 'inventory_batches.product_id', '=', 'products.id')
-    ->leftJoin('inventory_locations', 'inventory_locations.id', '=', 'inventory_batches.location_id')
-    ->selectRaw('
-        products.id,
-        products.name,
-        products.reorder_level,
-        COALESCE(SUM(CASE WHEN inventory_locations.code = "back" THEN inventory_batches.quantity ELSE 0 END), 0) as back_stock,
-        COALESCE(SUM(CASE WHEN inventory_locations.code = "front" THEN inventory_batches.quantity ELSE 0 END), 0) as front_stock
-    ')
-    ->groupBy('products.id', 'products.name', 'products.reorder_level')
-    ->orderBy('products.name')
-    ->get();
 
+            $inventoryLevels = DB::table('products')
+                ->leftJoin('inventory_batches', 'inventory_batches.product_id', '=', 'products.id')
+                ->leftJoin('inventory_locations', 'inventory_locations.id', '=', 'inventory_batches.location_id')
+                ->selectRaw('
+                    products.id,
+                    products.name,
+                    products.reorder_level,
+                    COALESCE(SUM(CASE WHEN inventory_locations.code = "back" THEN inventory_batches.quantity ELSE 0 END), 0) as back_stock,
+                    COALESCE(SUM(CASE WHEN inventory_locations.code = "front" THEN inventory_batches.quantity ELSE 0 END), 0) as front_stock
+                ')
+                ->groupBy('products.id', 'products.name', 'products.reorder_level')
+                ->orderBy('products.name')
+                ->get();
 
             return [
-                'pendingStockRequestCount'      => StockRequest::where('status', 'pending')->count(),
-                'pendingIncomingDeliveriesCount'=> PurchaseOrder::whereIn('status', ['pending', 'approved'])->count(),
-                'lowStockItems'                 => $lowStockItems,
-                'pendingTransfers'              => StockRequest::with('product')->where('status', 'pending')->latest()->limit(5)->get(),
-                'pendingIncomingDeliveries'     => PurchaseOrder::whereIn('status', ['pending', 'approved'])->orderBy('expected_date')->limit(3)->get(),
-                'trendLabels'                   => collect($trendDays)->map(fn(string $d) => Carbon::parse($d)->format('D'))->values()->all(),
-                'consumptionTrendDatasets'      => $consumptionTrendDatasets,
-                'inventoryLevels' => $inventoryLevels,
-
+                'pendingStockRequestCount'       => StockRequest::where('status', 'pending')->count(),
+                'pendingIncomingDeliveriesCount' => PurchaseOrder::whereIn('status', ['pending', 'approved'])->count(),
+                'lowStockItems'                  => $lowStockItems,
+                'pendingTransfers'               => StockRequest::with('product')->where('status', 'pending')->latest()->limit(5)->get(),
+                'pendingIncomingDeliveries'      => PurchaseOrder::whereIn('status', ['pending', 'approved'])->orderBy('expected_date')->limit(3)->get(),
+                'trendLabels'                    => collect($trendDays)->map(fn (string $d) => Carbon::parse($d)->format('D'))->values()->all(),
+                'consumptionTrendDatasets'       => $consumptionTrendDatasets,
+                'inventoryLevels'                => $inventoryLevels,
             ];
         });
     }
@@ -267,7 +264,6 @@ class DashboardController extends Controller
         $todayStart = Carbon::today()->startOfDay();
         $todayEnd   = Carbon::today()->endOfDay();
 
-        // Combine count + sum into a single query using selectRaw
         $todayStats = Sale::query()
             ->where('user_id', $user->id)
             ->whereBetween('created_at', [$todayStart, $todayEnd])
