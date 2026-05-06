@@ -13,6 +13,30 @@
                     <a href="{{ route('purchase-orders.create') }}" class="btn btn-primary btn-sm">Create PO</a>
                 @endcan
             </div>
+            <div class="card module-surface mb-3">
+                <div class="card-body">
+                    <form method="GET" action="{{ route('purchase-orders.index') }}" class="row g-3">
+                        <div class="col-md-6">
+                            <label for="search" class="form-label">Search</label>
+                            <input type="text" class="form-control" id="search" name="search" value="{{ $search ?? '' }}" placeholder="Search by PO number or product name">
+                        </div>
+                        <div class="col-md-4">
+                            <label for="status" class="form-label">Status</label>
+                            <select class="form-select" id="status" name="status">
+                                <option value="">All</option>
+                                <option value="pending" {{ ($status ?? '') === 'pending' ? 'selected' : '' }}>Pending</option>
+                                <option value="approved" {{ ($status ?? '') === 'approved' ? 'selected' : '' }}>Approved</option>
+                                <option value="received" {{ ($status ?? '') === 'received' ? 'selected' : '' }}>Received</option>
+                                <option value="cancelled" {{ ($status ?? '') === 'cancelled' ? 'selected' : '' }}>Cancelled</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2 d-flex align-items-end">
+                            <button type="submit" class="btn btn-primary me-2">Filter</button>
+                            <a href="{{ route('purchase-orders.index') }}" class="btn btn-outline-secondary">Clear</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
             <div class="card module-surface">
                 <div class="card-body">
                     <table class="table table-hover mb-0 module-table">

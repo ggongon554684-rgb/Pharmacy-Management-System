@@ -174,14 +174,23 @@ class DashboardController extends Controller
                 $trendDays[] = $date->toDateString();
             }
 
+            $lowStockCount = DB::table('products')
+                ->leftJoin('inventory_batches', 'inventory_batches.product_id', '=', 'products.id')
+                ->leftJoin('inventory_locations', 'inventory_locations.id', '=', 'inventory_batches.location_id')
+                ->selectRaw('products.id, products.reorder_level, COALESCE(SUM(CASE WHEN inventory_locations.code = "back" THEN inventory_batches.quantity ELSE 0 END), 0) as back_stock')
+                ->groupBy('products.id', 'products.reorder_level')
+                ->havingRaw('back_stock <= products.reorder_level')
+                ->count();
+
             $lowStockItems = DB::table('products')
                 ->select('products.id', 'products.name', 'products.generic_name', 'products.sku', 'products.price', 'products.reorder_level', 'products.created_at', 'products.updated_at', 'products.deleted_at')
                 ->selectSub(function ($query) {
                     $query->from('inventory_batches')
-                        ->selectRaw('COALESCE(SUM(quantity), 0)')
-                        ->whereColumn('product_id', 'products.id');
+                        ->join('inventory_locations', 'inventory_locations.id', '=', 'inventory_batches.location_id')
+                        ->selectRaw('COALESCE(SUM(inventory_batches.quantity), 0)')
+                        ->whereColumn('inventory_batches.product_id', 'products.id')
+                        ->where('inventory_locations.code', 'back');
                 }, 'inventory_batches_sum_quantity')
-                ->leftJoin('inventory_batches', 'inventory_batches.product_id', '=', 'products.id')
                 ->groupBy('products.id', 'products.name', 'products.generic_name', 'products.sku', 'products.price', 'products.reorder_level', 'products.created_at', 'products.updated_at', 'products.deleted_at')
                 ->havingRaw('inventory_batches_sum_quantity <= products.reorder_level')
                 ->orderByRaw('inventory_batches_sum_quantity ASC')
@@ -246,6 +255,7 @@ class DashboardController extends Controller
             return [
                 'pendingStockRequestCount'       => StockRequest::where('status', 'pending')->count(),
                 'pendingIncomingDeliveriesCount' => PurchaseOrder::whereIn('status', ['pending', 'approved'])->count(),
+                'lowStockCount'                  => $lowStockCount,
                 'lowStockItems'                  => $lowStockItems,
                 'pendingTransfers'               => StockRequest::with('product')->where('status', 'pending')->latest()->limit(5)->get(),
                 'pendingIncomingDeliveries'      => PurchaseOrder::whereIn('status', ['pending', 'approved'])->orderBy('expected_date')->limit(3)->get(),
@@ -270,11 +280,20 @@ class DashboardController extends Controller
             ->selectRaw('COUNT(*) as sale_count, COALESCE(SUM(total_amount), 0) as sale_total')
             ->first();
 
+        $lowStockCount = DB::table('products')
+            ->leftJoin('inventory_batches', 'inventory_batches.product_id', '=', 'products.id')
+            ->leftJoin('inventory_locations', 'inventory_locations.id', '=', 'inventory_batches.location_id')
+            ->selectRaw('products.id, products.reorder_level, COALESCE(SUM(CASE WHEN inventory_locations.code = "front" THEN inventory_batches.quantity ELSE 0 END), 0) as front_stock')
+            ->groupBy('products.id', 'products.reorder_level')
+            ->havingRaw('front_stock <= products.reorder_level')
+            ->count();
+
         return [
             'mySalesTodayCount'      => (int) $todayStats->sale_count,
             'mySalesTodayTotal'      => (float) $todayStats->sale_total,
             'myPendingStockRequests' => StockRequest::where('requested_by', $user->id)->where('status', 'pending')->count(),
             'myRecentSales'          => Sale::with('patient')->where('user_id', $user->id)->latest()->limit(6)->get(),
+            'lowStockCount'          => $lowStockCount,
         ];
     }
 }

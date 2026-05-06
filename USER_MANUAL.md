@@ -47,9 +47,9 @@ The Pharmacy Management System is a comprehensive web-based application built wi
 
 After seeding, use these credentials:
 
-- **Admin**: admin@pharmacy.com / password
-- **Pharmacist**: pharmacist@pharmacy.com / password
-- **Staff**: staff@pharmacy.com / password
+- **Admin**: admin@pharmacy.local / password
+- **Pharmacist**: pharmacist@pharmacy.local / password
+- **Staff**: staff@pharmacy.local / password
 
 ## User Roles and Responsibilities
 

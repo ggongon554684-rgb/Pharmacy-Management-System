@@ -16,11 +16,52 @@
                 <div class="alert alert-danger">{{ session('error') }}</div>
             @endif
             @if(($stockStatus ?? null) === 'low')
+                @php
+                    $locationLabel = 'stock';
+                    if (request('location') === 'front') {
+                        $locationLabel = 'front-shop stock';
+                    } elseif (request('location') === 'back') {
+                        $locationLabel = 'back inventory stock';
+                    }
+                @endphp
                 <div class="alert alert-warning d-flex justify-content-between align-items-center">
-                    <span>Showing products with low stock only.</span>
+                    <span>Showing products with low {{ $locationLabel }} only.</span>
                     <a href="{{ route('products.index') }}" class="btn btn-sm btn-outline-dark">Clear filter</a>
                 </div>
             @endif
+
+            <!-- Search and Filters -->
+            <div class="card ui-surface mb-3">
+                <div class="card-body">
+                    <form method="GET" action="{{ route('products.index') }}" class="row g-3">
+                        <div class="col-md-4">
+                            <label for="search" class="form-label">Search</label>
+                            <input type="text" class="form-control" id="search" name="search" value="{{ $search ?? '' }}" placeholder="Search by name, SKU, or generic name">
+                        </div>
+                        <div class="col-md-3">
+                            <label for="stock_status" class="form-label">Stock Status</label>
+                            <select class="form-select" id="stock_status" name="stock_status">
+                                <option value="">All</option>
+                                <option value="low" {{ ($stockStatus ?? '') === 'low' ? 'selected' : '' }}>Low Stock</option>
+                                <option value="normal" {{ ($stockStatus ?? '') === 'normal' ? 'selected' : '' }}>Normal Stock</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label for="location" class="form-label">Location</label>
+                            <select class="form-select" id="location" name="location">
+                                <option value="">All</option>
+                                <option value="front" {{ ($location ?? '') === 'front' ? 'selected' : '' }}>Front Shop</option>
+                                <option value="back" {{ ($location ?? '') === 'back' ? 'selected' : '' }}>Back Inventory</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2 d-flex align-items-end">
+                            <button type="submit" class="btn btn-primary me-2">Filter</button>
+                            <a href="{{ route('products.index') }}" class="btn btn-outline-secondary">Clear</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
             <div class="card ui-surface">
                 <div class="card-body">
                     <div class="table-responsive">
@@ -39,10 +80,18 @@
                             </thead>
                             <tbody>
                                 @forelse($products as $product)
-                                    @php $stock = $product->inventory_batches_sum_quantity ?? 0; @endphp
-                                    @php $frontStock = $product->front_stock ?? 0; @endphp
-                                    @php $backStock = $product->back_stock ?? 0; @endphp
-                                    <tr class="{{ $stock <= $product->reorder_level ? 'table-danger' : '' }}">
+                                    @php
+                                        $stock = $product->inventory_batches_sum_quantity ?? 0;
+                                        $frontStock = $product->front_stock ?? 0;
+                                        $backStock = $product->back_stock ?? 0;
+                                        $highlightStock = $stock;
+                                        if (($stockStatus ?? null) === 'low' && request('location') === 'front') {
+                                            $highlightStock = $frontStock;
+                                        } elseif (($stockStatus ?? null) === 'low' && request('location') === 'back') {
+                                            $highlightStock = $backStock;
+                                        }
+                                    @endphp
+                                    <tr class="{{ $highlightStock <= $product->reorder_level ? 'table-danger' : '' }}">
                                         <td>
                                             {{ $product->name }}
                                             @if($product->generic_name)

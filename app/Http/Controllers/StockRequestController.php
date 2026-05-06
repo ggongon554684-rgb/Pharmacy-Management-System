@@ -20,10 +20,26 @@ class StockRequestController extends Controller
     {
     }
 
-    public function index()
+    public function index(Request $request)
     {
         abort_unless(Gate::allows('create stock requests') || Gate::allows('approve stock release'), 403);
-        $stockRequests = StockRequest::with('product')->latest()->paginate(15);
+
+        $search = $request->query('search');
+        $status = $request->query('status');
+
+        $stockRequests = StockRequest::with('product')
+            ->when($search, function ($query) use ($search) {
+                $query->whereHas('product', function ($q) use ($search) {
+                    $q->where('name', 'like', "%{$search}%")
+                      ->orWhere('sku', 'like', "%{$search}%");
+                });
+            })
+            ->when($status, function ($query) use ($status) {
+                $query->where('status', $status);
+            })
+            ->latest()
+            ->paginate(15);
+
         $productIds = collect($stockRequests->items())->pluck('product_id')->filter()->unique()->values();
         $frontStocksByProduct = InventoryBatch::query()
             ->whereIn('product_id', $productIds)
@@ -38,7 +54,7 @@ class StockRequestController extends Controller
             ->groupBy('product_id')
             ->pluck('total_quantity', 'product_id');
 
-        return view('stock-requests.index', compact('stockRequests', 'frontStocksByProduct', 'backStocksByProduct'));
+        return view('stock-requests.index', compact('stockRequests', 'frontStocksByProduct', 'backStocksByProduct', 'search', 'status'));
     }
 
     public function create()

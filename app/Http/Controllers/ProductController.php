@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Product;
 use App\Models\AuditLog;
+use App\Models\InventoryLocation;
 use Illuminate\Http\Request;
 
 class ProductController extends Controller
@@ -11,6 +12,15 @@ class ProductController extends Controller
     public function index(Request $request)
     {
         $stockStatus = $request->query('stock_status');
+        $location = $request->query('location');
+        $search = $request->query('search');
+
+        $locationId = null;
+        if (in_array($location, ['front', 'back'], true)) {
+            $locationId = InventoryLocation::query()
+                ->where('code', $location)
+                ->value('id');
+        }
 
         $products = Product::withSum('inventoryBatches', 'quantity')
             ->withSum([
@@ -19,13 +29,30 @@ class ProductController extends Controller
             ->withSum([
                 'inventoryBatches as back_stock' => fn ($query) => $query->forLocationCode('back'),
             ], 'quantity')
-            ->when($stockStatus === 'low', function ($query) {
-                $query->whereRaw('COALESCE((SELECT SUM(quantity) FROM inventory_batches WHERE inventory_batches.product_id = products.id), 0) <= reorder_level');
+            ->when($search, function ($query) use ($search) {
+                $query->where(function ($q) use ($search) {
+                    $q->where('name', 'like', "%{$search}%")
+                      ->orWhere('sku', 'like', "%{$search}%")
+                      ->orWhere('generic_name', 'like', "%{$search}%");
+                });
+            })
+            ->when($stockStatus === 'low', function ($query) use ($locationId) {
+                if ($locationId !== null) {
+                    $query->whereRaw(
+                        'COALESCE((SELECT SUM(quantity) FROM inventory_batches WHERE inventory_batches.product_id = products.id AND inventory_batches.location_id = ?), 0) <= reorder_level',
+                        [$locationId]
+                    );
+                } else {
+                    $query->whereRaw('COALESCE((SELECT SUM(quantity) FROM inventory_batches WHERE inventory_batches.product_id = products.id), 0) <= reorder_level');
+                }
+            })
+            ->when($stockStatus === 'normal', function ($query) {
+                $query->whereRaw('COALESCE((SELECT SUM(quantity) FROM inventory_batches WHERE inventory_batches.product_id = products.id), 0) > reorder_level');
             })
             ->latest()
             ->paginate(15);
 
-        return view('products.index', compact('products', 'stockStatus'));
+        return view('products.index', compact('products', 'stockStatus', 'location', 'search'));
     }
 
     public function create()

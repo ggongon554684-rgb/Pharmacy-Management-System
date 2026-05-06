@@ -68,7 +68,7 @@
                         <div class="card-body">
                             <div class="pharm-label mb-2"><i class="bi bi-exclamation-triangle pharm-icon"></i>Low Stock Alerts</div>
                             <div class="pharm-value">{{ $lowStockCount }}</div>
-                            <a href="{{ route('products.index', ['stock_status' => 'low']) }}" class="btn btn-sm btn-outline-warning mt-2">Review</a>
+                            <a href="{{ route('products.index', ['stock_status' => 'low', 'location' => 'front']) }}" class="btn btn-sm btn-outline-warning mt-2">Review</a>
                         </div>
                     </div>
                 </div>

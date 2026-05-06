@@ -12,10 +12,25 @@ use Illuminate\Support\Facades\DB;
 
 class PurchaseOrderController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $purchaseOrders = PurchaseOrder::latest()->paginate(15);
-        return view('purchase-orders.index', compact('purchaseOrders'));
+        $search = $request->query('search');
+        $status = $request->query('status');
+
+        $purchaseOrders = PurchaseOrder::with('items.product')
+            ->when($search, function ($query) use ($search) {
+                $query->where('po_number', 'like', "%{$search}%")
+                      ->orWhereHas('items.product', function ($q) use ($search) {
+                          $q->where('name', 'like', "%{$search}%");
+                      });
+            })
+            ->when($status, function ($query) use ($status) {
+                $query->where('status', $status);
+            })
+            ->latest()
+            ->paginate(15);
+
+        return view('purchase-orders.index', compact('purchaseOrders', 'search', 'status'));
     }
 
     public function create()

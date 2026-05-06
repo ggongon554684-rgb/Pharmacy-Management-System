@@ -12,7 +12,7 @@
                 </div>
 
                 <div class="kpi-grid">
-                    <a href="{{ route('products.index', ['stock_status' => 'low']) }}" class="kpi-link">
+                    <a href="{{ route('products.index', ['stock_status' => 'low', 'location' => 'back']) }}" class="kpi-link">
                         <div class="kpi">
                             <div class="kpi-label">Items needing reorder</div>
                             <div class="kpi-value" style="color:#A32D2D;">{{ $lowStockCount }}</div>
