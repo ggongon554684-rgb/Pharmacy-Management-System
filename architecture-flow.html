@@ -1,0 +1,679 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pharmacy System — Transaction Flowcharts</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f5f4f0;
+    --surface: #ffffff;
+    --surface2: #f0efe9;
+    --border: rgba(0,0,0,0.08);
+    --border-strong: rgba(0,0,0,0.15);
+    --text: #1a1a18;
+    --text-muted: #6b6b62;
+    --text-faint: #9b9b8f;
+
+    --purple-fill: #EEEDFE;
+    --purple-stroke: #534AB7;
+    --purple-text: #3C3489;
+
+    --teal-fill: #E1F5EE;
+    --teal-stroke: #0F6E56;
+    --teal-text: #085041;
+
+    --coral-fill: #FAECE7;
+    --coral-stroke: #993C1D;
+    --coral-text: #712B13;
+
+    --gray-fill: #F1EFE8;
+    --gray-stroke: #5F5E5A;
+    --gray-text: #444441;
+
+    --radius: 10px;
+    --radius-pill: 22px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    padding: 40px 24px 80px;
+  }
+
+  .page-header {
+    max-width: 900px;
+    margin: 0 auto 40px;
+  }
+
+  .page-header h1 {
+    font-size: 28px;
+    font-weight: 600;
+    letter-spacing: -0.5px;
+    margin-bottom: 6px;
+  }
+
+  .page-header p {
+    font-size: 14px;
+    color: var(--text-muted);
+  }
+
+  .tabs {
+    max-width: 900px;
+    margin: 0 auto 24px;
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+
+  .tab {
+    padding: 7px 16px;
+    border-radius: 100px;
+    border: 1px solid var(--border-strong);
+    background: var(--surface);
+    color: var(--text-muted);
+    font-size: 13px;
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .tab:hover { background: var(--surface2); color: var(--text); }
+
+  .tab.active {
+    background: var(--text);
+    color: #fff;
+    border-color: var(--text);
+  }
+
+  .chart-wrap {
+    max-width: 900px;
+    margin: 0 auto;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 32px 24px 40px;
+    display: none;
+  }
+
+  .chart-wrap.visible { display: block; }
+
+  .chart-header {
+    margin-bottom: 28px;
+  }
+
+  .chart-header h2 {
+    font-size: 18px;
+    font-weight: 600;
+    letter-spacing: -0.3px;
+    margin-bottom: 4px;
+  }
+
+  .chart-header p {
+    font-size: 13px;
+    color: var(--text-muted);
+  }
+
+  svg.flowchart {
+    width: 100%;
+    height: auto;
+    display: block;
+  }
+
+  .legend {
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+    margin-top: 24px;
+    padding-top: 20px;
+    border-top: 1px solid var(--border);
+  }
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 12px;
+    color: var(--text-muted);
+  }
+
+  .legend-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  /* SVG node styles baked in via classes on the SVG */
+
+  .overview-panel {
+    font-size: 14px;
+    line-height: 1.55;
+    color: var(--text-muted);
+  }
+
+  .overview-panel h3 {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text);
+    margin: 20px 0 8px;
+  }
+
+  .overview-panel h3:first-child { margin-top: 0; }
+
+  .overview-panel ul {
+    margin: 0 0 0 1.1rem;
+    padding: 0;
+  }
+
+  .overview-panel li { margin-bottom: 4px; }
+
+  .overview-note {
+    font-size: 12px;
+    padding: 10px 12px;
+    background: var(--surface2);
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+    margin-bottom: 8px;
+    font-family: "DM Mono", monospace;
+    color: var(--text);
+  }
+
+  .dataflow {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: stretch;
+    gap: 10px;
+    margin-top: 12px;
+  }
+
+  .dataflow-step {
+    flex: 1 1 140px;
+    min-width: 120px;
+    padding: 14px 12px;
+    border-radius: var(--radius);
+    border: 1px solid var(--border-strong);
+    background: var(--surface2);
+  }
+
+  .dataflow-step strong {
+    display: block;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 6px;
+  }
+
+  .dataflow-step span {
+    font-size: 12px;
+    color: var(--text-muted);
+    line-height: 1.45;
+  }
+
+  .dataflow-arrow {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    color: var(--text-faint);
+    flex: 0 0 auto;
+    padding: 0 2px;
+  }
+
+  @media (max-width: 640px) {
+    .dataflow-arrow { transform: rotate(90deg); padding: 4px 0; }
+  }
+</style>
+</head>
+<body>
+
+<div class="page-header">
+  <h1>Pharmacy system — transaction flowcharts</h1>
+  <p>Presentation overview plus six end-to-end flows. Select a tab below (no server required).</p>
+</div>
+
+<div class="tabs">
+  <button class="tab active" onclick="show('overview')">Overview</button>
+  <button class="tab" onclick="show('pos')">POS sale</button>
+  <button class="tab" onclick="show('po')">Purchase order</button>
+  <button class="tab" onclick="show('stock')">Stock request</button>
+  <button class="tab" onclick="show('kiosk')">Kiosk / pre-order</button>
+  <button class="tab" onclick="show('inv')">Inventory core</button>
+  <button class="tab" onclick="show('admin')">Admin</button>
+</div>
+
+<!-- ── OVERVIEW (presentation) ─────────────────────────────────── -->
+<div id="chart-overview" class="chart-wrap visible">
+  <div class="chart-header">
+    <h2>Overview — database and data path</h2>
+    <p>Use this tab for the “how it connects to the database” and “input → system → database → output” segments of a short presentation.</p>
+  </div>
+  <div class="overview-panel">
+    <h3>MySQL connection</h3>
+    <p>Laravel reads <span style="font-family:DM Mono,monospace;font-size:12px;">DB_HOST</span>, <span style="font-family:DM Mono,monospace;font-size:12px;">DB_DATABASE</span>, <span style="font-family:DM Mono,monospace;font-size:12px;">DB_USERNAME</span> from <span style="font-family:DM Mono,monospace;font-size:12px;">.env</span> and connects through <span style="font-family:DM Mono,monospace;font-size:12px;">config/database.php</span> (driver <span style="font-family:DM Mono,monospace;font-size:12px;">mysql</span>).</p>
+    <p class="overview-note"><span style="white-space:nowrap;"></span>  <span style="white-space:nowrap;">.env.example</span> is <strong>laravel</strong>).</p>
+
+    <h3>Key tables (examples)</h3>
+    <ul>
+      <li><strong style="font-family:DM Mono,monospace;font-size:12px;color:var(--text);">users</strong> — accounts; roles via Spatie permission tables</li>
+      <li><strong style="font-family:DM Mono,monospace;font-size:12px;color:var(--text);">patients</strong>, <strong style="font-family:DM Mono,monospace;font-size:12px;color:var(--text);">products</strong> — master data for POS</li>
+      <li><strong style="font-family:DM Mono,monospace;font-size:12px;color:var(--text);">inventory_batches</strong>, <strong style="font-family:DM Mono,monospace;font-size:12px;color:var(--text);">stock_movements</strong> — stock truth and traceability</li>
+      <li><strong style="font-family:DM Mono,monospace;font-size:12px;color:var(--text);">purchase_orders</strong> — procurement lifecycle</li>
+      <li><strong style="font-family:DM Mono,monospace;font-size:12px;color:var(--text);">sales</strong>, <strong style="font-family:DM Mono,monospace;font-size:12px;color:var(--text);">sale_line_items</strong> — checkout</li>
+      <li><strong style="font-family:DM Mono,monospace;font-size:12px;color:var(--text);">audit_logs</strong> — who / what / when for sensitive actions</li>
+    </ul>
+
+    <h3>Data path</h3>
+    <div class="dataflow">
+      <div class="dataflow-step">
+        <strong>Input</strong>
+        <span>Browser forms &amp; buttons (Blade views)</span>
+      </div>
+      <div class="dataflow-arrow" aria-hidden="true">→</div>
+      <div class="dataflow-step">
+        <strong>System</strong>
+        <span>HTTP routes → controllers → validation → Eloquent models</span>
+      </div>
+      <div class="dataflow-arrow" aria-hidden="true">→</div>
+      <div class="dataflow-step">
+        <strong>Database</strong>
+        <span>MySQL tables; transactions for multi-row writes</span>
+      </div>
+      <div class="dataflow-arrow" aria-hidden="true">→</div>
+      <div class="dataflow-step">
+        <strong>Output</strong>
+        <span>Updated pages, lists, receipts, reports, audit entries</span>
+      </div>
+    </div>
+    <p style="margin-top:16px;font-size:12px;">Detailed flows: use the other tabs. Spoken script and phpMyAdmin queries: see <strong style="color:var(--text);">PRESENTATION_SCRIPT.md</strong> and <strong style="color:var(--text);">PRESENTATION_PHPMYADMIN.md</strong> in the project root.</p>
+  </div>
+</div>
+
+<!-- ── POS SALE ─────────────────────────────────────────────────── -->
+<div id="chart-pos" class="chart-wrap">
+  <div class="chart-header">
+    <h2>POS sale</h2>
+    <p>Pharmacist logs in and processes a patient sale from item selection to printed receipt.</p>
+  </div>
+  <svg class="flowchart" viewBox="0 0 700 660" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <marker id="arr" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+        <path d="M2 1L8 5L2 9" fill="none" stroke="#888780" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+      </marker>
+    </defs>
+
+    <!-- START -->
+    <rect x="250" y="30" width="200" height="40" rx="20" fill="#F1EFE8" stroke="#5F5E5A" stroke-width="0.75"/>
+    <text x="350" y="50" text-anchor="middle" dominant-baseline="central" font-family="DM Sans" font-size="13" font-weight="600" fill="#444441">Pharmacist login</text>
+
+    <line x1="350" y1="70" x2="350" y2="100" stroke="#888780" stroke-width="1" marker-end="url(#arr)"/>
+
+    <!-- PATIENT -->
+    <rect x="225" y="100" width="250" height="54" rx="8" fill="#EEEDFE" stroke="#534AB7" stroke-width="0.75"/>
+    <text x="350" y="120" text-anchor="middle" dominant-baseline="central" font-family="DM Sans" font-size="13" font-weight="600" fill="#3C3489">Select / create patient</text>
+    <text x="350" y="140" text-anchor="middle" dominant-baseline="central" font-family="DM Sans" font-size="11" fill="#534AB7">Search existing or register new</text>
+
+    <line x1="350" y1="154" x2="350" y2="184" stroke="#888780" stroke-width="1" marker-end="url(#arr)"/>
+
+    <!-- ADD ITEMS -->
+    <rect x="225" y="184" width="250" height="54" rx="8" fill="#EEEDFE" stroke="#534AB7" stroke-width="0.75"/>
+    <text x="350" y="204" text-anchor="middle" dominant-baseline="central" font-family="DM Sans" font-size="13" font-weight="600" fill="#3C3489">Add products + qty</text>
+    <text x="350" y="224" text-anchor="middle" dominant-baseline="central" font-family="DM Sans" font-size="11" fill="#534AB7">Line items per transaction</text>
+
+    <line x1="350" y1="238" x2="350" y2="268" stroke="#888780" stroke-width="1" marker-end="url(#arr)"/>
+
+    <!-- VALIDATE -->
+    <rect x="225" y="268" width="250" height="54" rx="8" fill="#EEEDFE" stroke="#534AB7" stroke-width="0.75"/>
+    <text x="350" y="288" text-anchor="middle" dominant-baseline="central" font-family="DM Sans" font-size="13" font-weight="600" fill="#3C3489">Validate</text>
+    <text x="350" y="308" text-anchor="middle" dominant-baseline="central" font-family="DM Sans" font-size="11" fill="#534AB7">Payment + prescription check</text>
+
+    <line x1="350" y1="322" x2="350" y2="352" stroke="#888780" stroke-width="1" marker-end="url(#arr)"/>
+
+    <!-- FEFO -->
+    <rect x="215" y="352" width="270" height="54" rx="8" fill="#E1F5EE" stroke="#0F6E56" stroke-width="0.75"/>
+    <text x="350" y="372" text-anchor="middle" dominant-baseline="central" font-family="DM Sans" font-size="13" font-weight="600" fill="#085041">FEFO stock release</text>
+    <text x="350" y="392" text-anchor="middle" dominant-baseline="central" font-family="DM Sans" font-size="11" fill="#0F6E56">Oldest-expiry batch deducted first</text>
+    <rect x="490" y="362" width="52" height="20" rx="10" fill="#0F6E56" opacity="0.15" stroke="#0F6E56" stroke-width="0.5"/>
+    <text x="516" y="372" text-anchor="middle" dominant-baseline="central" font-family="DM Mono" font-size="10" fill="#085041">AUTO</text>
+
+    <line x1="350" y1="406" x2="350" y2="436" stroke="#888780" stroke-width="1" marker-end="url(#arr)"/>
+
+    <!-- DB TX -->
+    <rect x="195" y="436" width="310" height="54" rx="8" fill="#E1F5EE" stroke="#0F6E56" stroke-width="0.75"/>
+    <text x="350" y="456" text-anchor="middle" dominant-baseline="central" font-family="DM Sans" font-size="13" font-weight="600" fill="#085041">DB transaction</text>
+    <text x="350" y="476" text-anchor="middle" dominant-baseline="central" font-family="DM Sans" font-size="11" fill="#0F6E56">sales · line_items · movements · audit_logs</text>
+    <rect x="508" y="446" width="50" height="20" rx="10" fill="#0F6E56" opacity="0.15" stroke="#0F6E56" stroke-width="0.5"/>
+    <text x="533" y="456" text-anchor="middle" dominant-baseline="central" font-family="DM Mono" font-size="10" fill="#085041">ATOM</text>
+
+    <line x1="350" y1="490" x2="350" y2="520" stroke="#888780" stroke-width="1" marker-end="url(#arr)"/>
+
+    <!-- END -->
+    <rect x="250" y="520" width="200" height="40" rx="20" fill="#F1EFE8" stroke="#5F5E5A" stroke-width="0.75"/>
+    <text x="350" y="540" text-anchor="middle" dominant-baseline="central" font-family="DM Sans" font-size="13" font-weight="600" fill="#444441">Show receipt</text>
+  </svg>
+  <div class="legend">
+    <div class="legend-item"><div class="legend-dot" style="background:#534AB7"></div>User-facing steps</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#0F6E56"></div>Automated system actions</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#5F5E5A"></div>Start / end</div>
+  </div>
+</div>
+
+<!-- ── PURCHASE ORDER ──────────────────────────────────────────── -->
+<div id="chart-po" class="chart-wrap">
+  <div class="chart-header">
+    <h2>Purchase order</h2>
+    <p>From staff draft through admin approval to stock on the shelf.</p>
+  </div>
+  <svg class="flowchart" viewBox="0 0 700 620" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <marker id="arr2" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+        <path d="M2 1L8 5L2 9" fill="none" stroke="#888780" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+      </marker>
+    </defs>
+
+    <rect x="250" y="30" width="200" height="40" rx="20" fill="#F1EFE8" stroke="#5F5E5A" stroke-width="0.75"/>
+    <text x="350" y="50" text-anchor="middle" dominant-baseline="central" font-family="DM Sans" font-size="13" font-weight="600" fill="#444441">Staff creates PO</text>
+    <text x="470" y="50" text-anchor="start" dominant-baseline="central" font-family="DM Mono" font-size="10" fill="#9b9b8f">status: pending</text>
+
+    <line x1="350" y1="70" x2="350" y2="100" stroke="#888780" stroke-width="1" marker-end="url(#arr2)"/>
+
+    <rect x="225" y="100" width="250" height="54" rx="8" fill="#EEEDFE" stroke="#534AB7" stroke-width="0.75"/>
+    <text x="350" y="120" text-anchor="middle" dominant-baseline="central" font-family="DM Sans" font-size="13" font-weight="600" fill="#3C3489">Admin reviews PO</text>
+    <text x="350" y="140" text-anchor="middle" dominant-baseline="central" font-family="DM Sans" font-size="11" fill="#534AB7">Approval gate</text>
+    <text x="488" y="127" text-anchor="start" dominant-baseline="central" font-family="DM Mono" font-size="10" fill="#9b9b8f">→ approved</text>
+
+    <line x1="350" y1="154" x2="350" y2="184" stroke="#888780" stroke-width="1" marker-end="url(#arr2)"/>
+
+    <rect x="210" y="184" width="280" height="54" rx="8" fill="#EEEDFE" stroke="#534AB7" stroke-width="0.75"/>
+    <text x="350" y="204" text-anchor="middle" dominant-baseline="central" font-family="DM Sans" font-size="13" font-weight="600" fill="#3C3489">Staff receives goods</text>
+    <text x="350" y="224" text-anchor="middle" dominant-baseline="central" font-family="DM Sans" font-size="11" fill="#534AB7">Batch no · expiry · receive date</text>
+
+    <line x1="350" y1="238" x2="350" y2="268" stroke="#888780" stroke-width="1" marker-end="url(#arr2)"/>
+
+    <rect x="200" y="268" width="300" height="54" rx="8" fill="#E1F5EE" stroke="#0F6E56" stroke-width="0.75"/>
+    <text x="350" y="288" text-anchor="middle" dominant-baseline="central" font-family="DM Sans" font-size="13" font-weight="600" fill="#085041">Create inventory batches</text>
+    <text x="350" y="308" text-anchor="middle" dominant-baseline="central" font-family="DM Sans" font-size="11" fill="#0F6E56">inventory_batches · cost · expiry · qty</text>
+
+    <line x1="350" y1="322" x2="350" y2="352" stroke="#888780" stroke-width="1" marker-end="url(#arr2)"/>
+
+    <rect x="210" y="352" width="280" height="54" rx="8" fill="#E1F5EE" stroke="#0F6E56" stroke-width="0.75"/>
+    <text x="350" y="372" text-anchor="middle" dominant-baseline="central" font-family="DM Sans" font-size="13" font-weight="600" fill="#085041">Write stock movement</text>
+    <text x="350" y="392" text-anchor="middle" dominant-baseline="central" font-family="DM Sans" font-size="11" fill="#0F6E56">type: incoming</text>
+
+    <line x1="350" y1="406" x2="350" y2="436" stroke="#888780" stroke-width="1" marker-end="url(#arr2)"/>
+
+    <rect x="210" y="436" width="280" height="54" rx="8" fill="#E1F5EE" stroke="#0F6E56" stroke-width="0.75"/>
+    <text x="350" y="456" text-anchor="middle" dominant-baseline="central" font-family="DM Sans" font-size="13" font-weight="600" fill="#085041">Write audit log</text>
+    <text x="350" y="476" text-anchor="middle" dominant-baseline="central" font-family="DM Sans" font-size="11" fill="#0F6E56">User · timestamp · backdate reason</text>
+
+    <line x1="350" y1="490" x2="350" y2="520" stroke="#888780" stroke-width="1" marker-end="url(#arr2)"/>
+
+    <rect x="240" y="520" width="220" height="40" rx="20" fill="#F1EFE8" stroke="#5F5E5A" stroke-width="0.75"/>
+    <text x="350" y="540" text-anchor="middle" dominant-baseline="central" font-family="DM Sans" font-size="13" font-weight="600" fill="#444441">PO status: received</text>
+  </svg>
+  <div class="legend">
+    <div class="legend-item"><div class="legend-dot" style="background:#534AB7"></div>User-facing steps</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#0F6E56"></div>System writes</div>
+  </div>
+</div>
+
+<!-- ── STOCK REQUEST ───────────────────────────────────────────── -->
+<div id="chart-stock" class="chart-wrap">
+  <div class="chart-header">
+    <h2>Stock request / replenishment</h2>
+    <p>Front shop requests stock from the back store. Two movements are created atomically.</p>
+  </div>
+  <svg class="flowchart" viewBox="0 0 700 720" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <marker id="arr3" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+        <path d="M2 1L8 5L2 9" fill="none" stroke="#888780" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+      </marker>
+    </defs>
+
+    <rect x="235" y="30" width="230" height="40" rx="20" fill="#F1EFE8" stroke="#5F5E5A" stroke-width="0.75"/>
+    <text x="350" y="50" text-anchor="middle" dominant-baseline="central" font-family="DM Sans" font-size="13" font-weight="600" fill="#444441">Pharmacist raises request</text>
+
+    <line x1="350" y1="70" x2="350" y2="100" stroke="#888780" stroke-width="1" marker-end="url(#arr3)"/>
+
+    <rect x="225" y="100" width="250" height="54" rx="8" fill="#EEEDFE" stroke="#534AB7" stroke-width="0.75"/>
+    <text x="350" y="120" text-anchor="middle" dominant-baseline="central" font-family="DM Sans" font-size="13" font-weight="600" fill="#3C3489">Staff approves</text>
+    <text x="350" y="140" text-anchor="middle" dominant-baseline="central" font-family="DM Sans" font-size="11" fill="#534AB7">Adjust qty + add reason</text>
+
+    <line x1="350" y1="154" x2="350" y2="184" stroke="#888780" stroke-width="1" marker-end="url(#arr3)"/>
+
+    <rect x="210" y="184" width="280" height="54" rx="8" fill="#E1F5EE" stroke="#0F6E56" stroke-width="0.75"/>
+    <text x="350" y="204" text-anchor="middle" dominant-baseline="central" font-family="DM Sans" font-size="13" font-weight="600" fill="#085041">FEFO release — back store</text>
+    <text x="350" y="224" text-anchor="middle" dominant-baseline="central" font-family="DM Sans" font-size="11" fill="#0F6E56">Oldest-expiry batch selected</text>
+
+    <line x1="350" y1="238" x2="350" y2="280" stroke="#888780" stroke-width="1"/>
+    <text x="350" y="273" text-anchor="middle" font-family="DM Sans" font-size="11" fill="#9b9b8f">One atomic transaction</text>
+
+    <!-- fork left -->
+    <path d="M350 280 L160 280 L160 300" fill="none" stroke="#888780" stroke-width="1" marker-end="url(#arr3)"/>
+    <!-- fork right -->
+    <path d="M350 280 L540 280 L540 300" fill="none" stroke="#888780" stroke-width="1" marker-end="url(#arr3)"/>
+
+    <rect x="60" y="300" width="200" height="54" rx="8" fill="#E1F5EE" stroke="#0F6E56" stroke-width="0.75"/>
+    <text x="160" y="320" text-anchor="middle" dominant-baseline="central" font-family="DM Sans" font-size="13" font-weight="600" fill="#085041">Movement 1</text>
+    <text x="160" y="340" text-anchor="middle" dominant-baseline="central" font-family="DM Sans" font-size="11" fill="#0F6E56">release · back store out</text>
+
+    <rect x="440" y="300" width="200" height="54" rx="8" fill="#E1F5EE" stroke="#0F6E56" stroke-width="0.75"/>
+    <text x="540" y="320" text-anchor="middle" dominant-baseline="central" font-family="DM Sans" font-size="13" font-weight="600" fill="#085041">Movement 2</text>
+    <text x="540" y="340" text-anchor="middle" dominant-baseline="central" font-family="DM Sans" font-size="11" fill="#0F6E56">incoming · front store in</text>
+
+    <!-- merge -->
+    <path d="M160 354 L160 430 L350 430" fill="none" stroke="#888780" stroke-width="1" marker-end="url(#arr3)"/>
+    <path d="M540 354 L540 430 L350 430" fill="none" stroke="#888780" stroke-width="1" marker-end="url(#arr3)"/>
+
+    <rect x="215" y="430" width="270" height="54" rx="8" fill="#E1F5EE" stroke="#0F6E56" stroke-width="0.75"/>
+    <text x="350" y="450" text-anchor="middle" dominant-baseline="central" font-family="DM Sans" font-size="13" font-weight="600" fill="#085041">Update front batch</text>
+    <text x="350" y="470" text-anchor="middle" dominant-baseline="central" font-family="DM Sans" font-size="11" fill="#0F6E56">Add or increment qty</text>
+
+    <line x1="350" y1="484" x2="350" y2="514" stroke="#888780" stroke-width="1" marker-end="url(#arr3)"/>
+
+    <rect x="215" y="514" width="270" height="54" rx="8" fill="#E1F5EE" stroke="#0F6E56" stroke-width="0.75"/>
+    <text x="350" y="534" text-anchor="middle" dominant-baseline="central" font-family="DM Sans" font-size="13" font-weight="600" fill="#085041">Write audit log</text>
+    <text x="350" y="554" text-anchor="middle" dominant-baseline="central" font-family="DM Sans" font-size="11" fill="#0F6E56">User · qty adjustments · timestamp</text>
+
+    <line x1="350" y1="568" x2="350" y2="598" stroke="#888780" stroke-width="1" marker-end="url(#arr3)"/>
+
+    <rect x="235" y="598" width="230" height="40" rx="20" fill="#F1EFE8" stroke="#5F5E5A" stroke-width="0.75"/>
+    <text x="350" y="618" text-anchor="middle" dominant-baseline="central" font-family="DM Sans" font-size="13" font-weight="600" fill="#444441">Request: fulfilled</text>
+  </svg>
+  <div class="legend">
+    <div class="legend-item"><div class="legend-dot" style="background:#534AB7"></div>User-facing steps</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#0F6E56"></div>Automated system actions</div>
+    <div class="legend-item" style="font-size:12px;color:#6b6b62">Two movements = one debit (back) + one credit (front)</div>
+  </div>
+</div>
+
+<!-- ── KIOSK ───────────────────────────────────────────────────── -->
+<div id="chart-kiosk" class="chart-wrap">
+  <div class="chart-header">
+    <h2>Kiosk / pre-order</h2>
+    <p>Public-facing kiosk captures the order; staff scan the token to complete via normal POS.</p>
+  </div>
+  <svg class="flowchart" viewBox="0 0 700 560" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <marker id="arr4" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+        <path d="M2 1L8 5L2 9" fill="none" stroke="#888780" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+      </marker>
+    </defs>
+
+    <rect x="235" y="30" width="230" height="40" rx="20" fill="#F1EFE8" stroke="#5F5E5A" stroke-width="0.75"/>
+    <text x="350" y="50" text-anchor="middle" dominant-baseline="central" font-family="DM Sans" font-size="13" font-weight="600" fill="#444441">Public user opens kiosk</text>
+
+    <line x1="350" y1="70" x2="350" y2="100" stroke="#888780" stroke-width="1" marker-end="url(#arr4)"/>
+
+    <rect x="215" y="100" width="270" height="54" rx="8" fill="#EEEDFE" stroke="#534AB7" stroke-width="0.75"/>
+    <text x="350" y="120" text-anchor="middle" dominant-baseline="central" font-family="DM Sans" font-size="13" font-weight="600" fill="#3C3489">Choose items + submit</text>
+    <text x="350" y="140" text-anchor="middle" dominant-baseline="central" font-family="DM Sans" font-size="11" fill="#534AB7">pre_orders + pre_order_items created</text>
+
+    <line x1="350" y1="154" x2="350" y2="184" stroke="#888780" stroke-width="1" marker-end="url(#arr4)"/>
+
+    <rect x="210" y="184" width="280" height="54" rx="8" fill="#E1F5EE" stroke="#0F6E56" stroke-width="0.75"/>
+    <text x="350" y="204" text-anchor="middle" dominant-baseline="central" font-family="DM Sans" font-size="13" font-weight="600" fill="#085041">Generate scan token</text>
+    <text x="350" y="224" text-anchor="middle" dominant-baseline="central" font-family="DM Sans" font-size="11" fill="#0F6E56">Signed URL · ticket page shown</text>
+
+    <line x1="350" y1="238" x2="350" y2="268" stroke="#888780" stroke-width="1" marker-end="url(#arr4)"/>
+
+    <rect x="215" y="268" width="270" height="54" rx="8" fill="#EEEDFE" stroke="#534AB7" stroke-width="0.75"/>
+    <text x="350" y="288" text-anchor="middle" dominant-baseline="central" font-family="DM Sans" font-size="13" font-weight="600" fill="#3C3489">Staff scans token</text>
+    <text x="350" y="308" text-anchor="middle" dominant-baseline="central" font-family="DM Sans" font-size="11" fill="#534AB7">Validates URL · prefills POS form</text>
+
+    <line x1="350" y1="322" x2="350" y2="352" stroke="#888780" stroke-width="1" marker-end="url(#arr4)"/>
+
+    <rect x="175" y="352" width="350" height="54" rx="8" fill="#E1F5EE" stroke="#0F6E56" stroke-width="0.75"/>
+    <text x="350" y="372" text-anchor="middle" dominant-baseline="central" font-family="DM Sans" font-size="13" font-weight="600" fill="#085041">Normal POS flow runs</text>
+    <text x="350" y="392" text-anchor="middle" dominant-baseline="central" font-family="DM Sans" font-size="11" fill="#0F6E56">FEFO · DB transaction · movements · logs</text>
+
+    <line x1="350" y1="406" x2="350" y2="436" stroke="#888780" stroke-width="1" marker-end="url(#arr4)"/>
+
+    <rect x="250" y="436" width="200" height="40" rx="20" fill="#F1EFE8" stroke="#5F5E5A" stroke-width="0.75"/>
+    <text x="350" y="456" text-anchor="middle" dominant-baseline="central" font-family="DM Sans" font-size="13" font-weight="600" fill="#444441">Receipt issued</text>
+  </svg>
+  <div class="legend">
+    <div class="legend-item"><div class="legend-dot" style="background:#534AB7"></div>User-facing steps</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#0F6E56"></div>System actions</div>
+  </div>
+</div>
+
+<!-- ── INVENTORY CORE ──────────────────────────────────────────── -->
+<div id="chart-inv" class="chart-wrap">
+  <div class="chart-header">
+    <h2>Inventory core logic</h2>
+    <p>Three paths stock can take — every movement converges on <code style="font-family:DM Mono;font-size:12px">stock_movements</code> and <code style="font-family:DM Mono;font-size:12px">audit_logs</code>.</p>
+  </div>
+  <svg class="flowchart" viewBox="0 0 700 420" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <marker id="arr5" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+        <path d="M2 1L8 5L2 9" fill="none" stroke="#888780" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+      </marker>
+    </defs>
+
+    <!-- Row 1: three entry types -->
+    <rect x="30" y="40" width="180" height="54" rx="8" fill="#E1F5EE" stroke="#0F6E56" stroke-width="0.75"/>
+    <text x="120" y="60" text-anchor="middle" dominant-baseline="central" font-family="DM Sans" font-size="13" font-weight="600" fill="#085041">Stock enters</text>
+    <text x="120" y="80" text-anchor="middle" dominant-baseline="central" font-family="DM Sans" font-size="11" fill="#0F6E56">via PO receiving</text>
+
+    <rect x="260" y="40" width="180" height="54" rx="8" fill="#EEEDFE" stroke="#534AB7" stroke-width="0.75"/>
+    <text x="350" y="60" text-anchor="middle" dominant-baseline="central" font-family="DM Sans" font-size="13" font-weight="600" fill="#3C3489">Stock moves</text>
+    <text x="350" y="80" text-anchor="middle" dominant-baseline="central" font-family="DM Sans" font-size="11" fill="#534AB7">back → front shop</text>
+
+    <rect x="490" y="40" width="180" height="54" rx="8" fill="#FAECE7" stroke="#993C1D" stroke-width="0.75"/>
+    <text x="580" y="60" text-anchor="middle" dominant-baseline="central" font-family="DM Sans" font-size="13" font-weight="600" fill="#712B13">Stock leaves</text>
+    <text x="580" y="80" text-anchor="middle" dominant-baseline="central" font-family="DM Sans" font-size="11" fill="#993C1D">via POS / kiosk sale</text>
+
+    <!-- Row 2: what happens -->
+    <rect x="30" y="140" width="180" height="44" rx="8" fill="#E1F5EE" stroke="#0F6E56" stroke-width="0.75"/>
+    <text x="120" y="162" text-anchor="middle" dominant-baseline="central" font-family="DM Mono" font-size="12" fill="#085041">inventory_batches</text>
+
+    <rect x="260" y="140" width="180" height="44" rx="8" fill="#EEEDFE" stroke="#534AB7" stroke-width="0.75"/>
+    <text x="350" y="162" text-anchor="middle" dominant-baseline="central" font-family="DM Sans" font-size="13" font-weight="600" fill="#3C3489">2 movements</text>
+
+    <rect x="490" y="140" width="180" height="44" rx="8" fill="#FAECE7" stroke="#993C1D" stroke-width="0.75"/>
+    <text x="580" y="162" text-anchor="middle" dominant-baseline="central" font-family="DM Sans" font-size="13" font-weight="600" fill="#712B13">Batch deducted</text>
+
+    <line x1="120" y1="94" x2="120" y2="140" stroke="#888780" stroke-width="1" marker-end="url(#arr5)"/>
+    <line x1="350" y1="94" x2="350" y2="140" stroke="#888780" stroke-width="1" marker-end="url(#arr5)"/>
+    <line x1="580" y1="94" x2="580" y2="140" stroke="#888780" stroke-width="1" marker-end="url(#arr5)"/>
+
+    <!-- Merge into stock_movements -->
+    <path d="M120 184 L120 260 L350 260" fill="none" stroke="#888780" stroke-width="1" marker-end="url(#arr5)"/>
+    <path d="M350 184 L350 260" fill="none" stroke="#888780" stroke-width="1" marker-end="url(#arr5)"/>
+    <path d="M580 184 L580 260 L350 260" fill="none" stroke="#888780" stroke-width="1" marker-end="url(#arr5)"/>
+
+    <rect x="200" y="260" width="300" height="54" rx="8" fill="#F1EFE8" stroke="#5F5E5A" stroke-width="0.75"/>
+    <text x="350" y="280" text-anchor="middle" dominant-baseline="central" font-family="DM Mono" font-size="13" fill="#444441">stock_movements</text>
+    <text x="350" y="300" text-anchor="middle" dominant-baseline="central" font-family="DM Sans" font-size="11" fill="#888780">Every change recorded here</text>
+
+    <line x1="350" y1="314" x2="350" y2="344" stroke="#888780" stroke-width="1" marker-end="url(#arr5)"/>
+
+    <rect x="220" y="344" width="260" height="44" rx="8" fill="#F1EFE8" stroke="#5F5E5A" stroke-width="0.75"/>
+    <text x="350" y="366" text-anchor="middle" dominant-baseline="central" font-family="DM Mono" font-size="13" fill="#444441">audit_logs</text>
+  </svg>
+  <div class="legend">
+    <div class="legend-item"><div class="legend-dot" style="background:#0F6E56"></div>Stock in (incoming)</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#534AB7"></div>Internal transfer</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#993C1D"></div>Stock out (release)</div>
+  </div>
+</div>
+
+<!-- ── ADMIN ───────────────────────────────────────────────────── -->
+<div id="chart-admin" class="chart-wrap">
+  <div class="chart-header">
+    <h2>Admin / compliance</h2>
+    <p>Audit tools, traceability logs, PIN-protected stock override, and reports.</p>
+  </div>
+  <svg class="flowchart" viewBox="0 0 700 460" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <marker id="arr6" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+        <path d="M2 1L8 5L2 9" fill="none" stroke="#888780" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+      </marker>
+    </defs>
+
+    <rect x="235" y="30" width="230" height="40" rx="20" fill="#F1EFE8" stroke="#5F5E5A" stroke-width="0.75"/>
+    <text x="350" y="50" text-anchor="middle" dominant-baseline="central" font-family="DM Sans" font-size="13" font-weight="600" fill="#444441">Admin / compliance view</text>
+
+    <!-- fan to 4 nodes -->
+    <path d="M350 70 L350 110 L100 110" fill="none" stroke="#888780" stroke-width="1" marker-end="url(#arr6)"/>
+    <path d="M350 70 L350 110 L270 110" fill="none" stroke="#888780" stroke-width="1" marker-end="url(#arr6)"/>
+    <path d="M350 70 L350 110 L440 110" fill="none" stroke="#888780" stroke-width="1" marker-end="url(#arr6)"/>
+    <path d="M350 70 L350 110 L600 110" fill="none" stroke="#888780" stroke-width="1" marker-end="url(#arr6)"/>
+
+    <rect x="20" y="110" width="160" height="54" rx="8" fill="#EEEDFE" stroke="#534AB7" stroke-width="0.75"/>
+    <text x="100" y="130" text-anchor="middle" dominant-baseline="central" font-family="DM Sans" font-size="12" font-weight="600" fill="#3C3489">Stock movements</text>
+    <text x="100" y="150" text-anchor="middle" dominant-baseline="central" font-family="DM Sans" font-size="11" fill="#534AB7">Full traceability</text>
+
+    <rect x="200" y="110" width="140" height="54" rx="8" fill="#EEEDFE" stroke="#534AB7" stroke-width="0.75"/>
+    <text x="270" y="130" text-anchor="middle" dominant-baseline="central" font-family="DM Sans" font-size="12" font-weight="600" fill="#3C3489">Audit log</text>
+    <text x="270" y="150" text-anchor="middle" dominant-baseline="central" font-family="DM Sans" font-size="11" fill="#534AB7">Who · what · when</text>
+
+    <rect x="360" y="110" width="160" height="54" rx="8" fill="#FAECE7" stroke="#993C1D" stroke-width="0.75"/>
+    <text x="440" y="130" text-anchor="middle" dominant-baseline="central" font-family="DM Sans" font-size="12" font-weight="600" fill="#712B13">Stock override</text>
+    <text x="440" y="150" text-anchor="middle" dominant-baseline="central" font-family="DM Sans" font-size="11" fill="#993C1D">Manual adjustment</text>
+
+    <rect x="540" y="110" width="140" height="54" rx="8" fill="#EEEDFE" stroke="#534AB7" stroke-width="0.75"/>
+    <text x="610" y="130" text-anchor="middle" dominant-baseline="central" font-family="DM Sans" font-size="12" font-weight="600" fill="#3C3489">Reports</text>
+    <text x="610" y="150" text-anchor="middle" dominant-baseline="central" font-family="DM Sans" font-size="11" fill="#534AB7">Inventory · Rx · patients</text>
+
+    <!-- Override sub-flow -->
+    <line x1="440" y1="164" x2="440" y2="240" stroke="#888780" stroke-width="1" marker-end="url(#arr6)"/>
+
+    <rect x="330" y="240" width="220" height="44" rx="8" fill="#FAECE7" stroke="#993C1D" stroke-width="0.75"/>
+    <text x="440" y="262" text-anchor="middle" dominant-baseline="central" font-family="DM Sans" font-size="13" font-weight="600" fill="#712B13">PIN verified</text>
+    <rect x="554" y="250" width="70" height="22" rx="11" fill="#993C1D" opacity="0.15" stroke="#993C1D" stroke-width="0.5"/>
+    <text x="589" y="261" text-anchor="middle" dominant-baseline="central" font-family="DM Mono" font-size="10" fill="#712B13">PROTECTED</text>
+
+    <line x1="440" y1="284" x2="440" y2="314" stroke="#888780" stroke-width="1" marker-end="url(#arr6)"/>
+
+    <rect x="280" y="314" width="320" height="54" rx="8" fill="#F1EFE8" stroke="#5F5E5A" stroke-width="0.75"/>
+    <text x="440" y="334" text-anchor="middle" dominant-baseline="central" font-family="DM Sans" font-size="13" font-weight="600" fill="#444441">Adjustment movement + audit log</text>
+    <text x="440" y="354" text-anchor="middle" dominant-baseline="central" font-family="DM Sans" font-size="11" fill="#888780">Both written in one transaction</text>
+  </svg>
+  <div class="legend">
+    <div class="legend-item"><div class="legend-dot" style="background:#534AB7"></div>Read / view</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#993C1D"></div>Write with protection</div>
+  </div>
+</div>
+
+<script>
+const flows = ['overview','pos','po','stock','kiosk','inv','admin'];
+function show(id) {
+  flows.forEach(f => {
+    document.getElementById('chart-'+f).classList.toggle('visible', f === id);
+  });
+  document.querySelectorAll('.tab').forEach((t, i) => {
+    t.classList.toggle('active', flows[i] === id);
+  });
+}
+</script>
+</body>
+</html>

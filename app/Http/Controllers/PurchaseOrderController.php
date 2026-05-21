@@ -208,11 +208,19 @@ class PurchaseOrderController extends Controller
             }
         });
 
-        return back()->with('success', 'PO received and stock added.');
+        return redirect()
+            ->route('purchase-orders.show', $purchaseOrder)
+            ->with('success', 'PO received and stock added.');
     }
 
     public function showReceiveForm(PurchaseOrder $purchaseOrder)
     {
+        if ($purchaseOrder->status === 'received') {
+            return redirect()
+                ->route('purchase-orders.show', $purchaseOrder)
+                ->with('success', 'This purchase order has already been received.');
+        }
+
         if ($purchaseOrder->status !== 'approved') {
             return redirect()->route('purchase-orders.show', $purchaseOrder)->with('error', 'Only approved PO can be received.');
         }

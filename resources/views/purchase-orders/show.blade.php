@@ -42,24 +42,5 @@
                 </div>
             </div>
         </div>
-    <script>
-        (function () {
-            const receiveDateInput = document.getElementById('receive_date');
-            const reasonContainer = document.getElementById('reason-container');
-            const today = new Date().toISOString().split('T')[0];
-
-            function toggleReasonField() {
-                const selectedDate = receiveDateInput.value;
-                const isToday = selectedDate === today;
-                reasonContainer.style.display = isToday ? 'none' : 'block';
-                const reasonInput = reasonContainer.querySelector('input');
-                if (reasonInput) {
-                    reasonInput.required = !isToday;
-                }
-            }
-
-            receiveDateInput.addEventListener('change', toggleReasonField);
-            toggleReasonField(); // Initial check
-        })();
-    </script>
+    </div>
 </x-app-layout>
